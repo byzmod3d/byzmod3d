@@ -1,0 +1,502 @@
+
+
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<!-- Mirrored from painel.aprantus.ga/painel/payloads/gerar_payload.php by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 20 Mar 2022 16:34:04 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<title>Aprantus - Gerar Payload</title>
+	<meta content='width=device-width, initial-scale=1.0, shrink-to-fit=no' name='viewport' />
+	<link rel="icon" href="https://painel.aprantus.ga/assets/img/icon.ico" type="image/x-icon"/>
+	
+	<!-- Fonts and icons -->
+	<script src="../../../unpkg.com/sweetalert%402.1.2/dist/sweetalert.min.js"></script>
+	<script src="../../assets/js/plugin/webfont/webfont.min.js"></script>
+<script language="javascript">
+function resetForm(){
+    with (document) {
+    	getElementById("nomepay").value = "";
+        getElementById("ipproxy").value = "";
+        getElementById("portaproxy").value = "";
+        getElementById("portaudp").value = "";
+        getElementById("dominio").value = "";
+        getElementById("sni").value = "";
+        getElementById("dnsone").value = "";
+        getElementById("dnstwo").value = "";
+        getElementById("bandeira").value = "";
+        getElementById("nomegrupo").value = "";
+        getElementById("saida").value = "";
+    }
+}
+</script>
+
+<script language="javascript">
+
+ function lock(){
+    with (document) {
+        document.getElementById("sni").disabled = true;
+    }
+}
+
+</script>
+
+<script language="javascript">
+
+ function unlock(){
+    with (document) {
+        document.getElementById("sni").disabled = false;
+    }
+}
+
+</script>
+
+<script language="javascript">
+
+function Copiar() {
+  /* Get the text field */
+  var copyText = document.getElementById("saida");
+
+  /* Select the text field */
+  copyText.select();
+  copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+   /* Copy the text inside the text field */
+  navigator.clipboard.writeText(copyText.value);
+
+  /* Alert the copied text */
+  swal('Copiada!', 'Sua payload foi copiada com sucesso', 'success');
+}
+
+</script>
+	<script>
+		WebFont.load({
+			google: {"families":["Lato:300,400,700,900"]},
+			custom: {"families":["Flaticon", "Font Awesome 5 Solid", "Font Awesome 5 Regular", "Font Awesome 5 Brands", "simple-line-icons"], urls: ['../../assets/css/fonts.min.css']},
+			active: function() {
+				sessionStorage.fonts = true;
+			}
+		});
+	</script>
+
+	<!-- CSS Files -->
+	<link rel="stylesheet" href="../../assets/css/bootstrap.min.css">
+	<link rel="stylesheet" href="../../assets/css/atlantis.min.css">
+	<!-- CSS Just for demo purpose, don't include it in your project -->
+	<link rel="stylesheet" href="../../assets/css/demo.css">
+</head>
+<body data-background-color="dark">
+	<div class="wrapper sidebar_minimize">
+		<div class="main-header">
+			<!-- Logo Header -->
+			<div class="logo-header" data-background-color="dark2">
+				
+				<a href="../index-2.html" class="logo">
+					<img src="https://painel.aprantus.ga/assets/img/logo.svg" alt="navbar brand" class="navbar-brand">
+				</a>
+				<button class="navbar-toggler sidenav-toggler ml-auto" type="button" data-toggle="collapse" data-target="collapse" aria-expanded="false" aria-label="Toggle navigation">
+					<span class="navbar-toggler-icon">
+						<i class="icon-menu"></i>
+					</span>
+				</button>
+				<button class="topbar-toggler more"><i class="icon-options-vertical"></i></button>
+				<div class="nav-toggle">
+					<button class="btn btn-toggle toggle-sidebar">
+						<i class="icon-menu"></i>
+					</button>
+				</div>
+			</div>
+			<!-- End Logo Header -->
+
+			<!-- Navbar Header -->
+			<nav class="navbar navbar-header navbar-expand-lg" data-background-color="dark">			
+				<div class="container-fluid">
+					<div class="collapse" id="search-nav">
+						<form class="navbar-left navbar-form nav-search mr-md-3">
+							<div class="input-group">
+								<div class="input-group-prepend">
+									<button type="submit" class="btn btn-search pr-1">
+										<i class="fa fa-search search-icon"></i>
+									</button>
+								</div>
+								<input type="text" placeholder="Search ..." class="form-control">
+							</div>
+						</form>
+					</div>
+					
+						
+						
+				</div>
+			</nav>
+			<!-- End Navbar -->
+		</div>
+		<!-- Sidebar -->
+		<div class="sidebar sidebar-style-2" data-background-color="dark2">
+			<div class="sidebar-wrapper scrollbar scrollbar-inner">
+				<div class="sidebar-content">
+					
+					<ul class="nav nav-primary">
+						<li class="nav-item">
+							<a data-toggle="not-collapsed" href="../index.html" class="not-collapsed" aria-expanded="false">
+								<i class="fas fa-home"></i>
+								<p>Dashboard</p>
+								
+							</a>
+						</li>
+						<li class="nav-section">
+							<span class="sidebar-mini-icon">
+								<i class="fa fa-ellipsis-h"></i>
+							</span>
+							<h4 class="text-section">Components</h4>
+						</li>
+						<li class="nav-item">
+							<a data-toggle="collapse" href="#base">
+								<i class="fas fa-layer-group"></i>
+								<p>Base64</p>
+								<span class="caret"></span>
+							</a>
+							<div class="collapse" id="base">
+								<ul class="nav nav-collapse">
+									
+									<li>
+										<a href="../base64/decrypt.html">
+											<span class="sub-item">Base64 Decrypt</span>
+										</a>
+									</li>
+									<li>
+										<a href="../base64/encrypt.html">
+											<span class="sub-item">Base64 Encrypt</span>
+										</a>
+									</li>
+								</ul>
+							</div>
+						</li>
+						<li class="nav-item">
+							<a data-toggle="collapse" href="#sidebarLayouts">
+								<i class="fas fa-th-list"></i>
+								<p>Remover Chines</p>
+								<span class="caret"></span>
+							</a>
+							<div class="collapse" id="sidebarLayouts">
+								<ul class="nav nav-collapse">
+									<li>
+										<a href="../decryptor/atlantus_ultimate_chines.html">
+											<span class="sub-item">Ultimate</span>
+										</a>
+									</li>
+									<li>
+										<a href="../decryptor/atlantus_ex702_chines.html">
+											<span class="sub-item">EX702</span>
+										</a>
+									</li>
+									<li>
+										<a href="../decryptor/atlantus_eclipse_chines.html">
+											<span class="sub-item">Eclipse</span>
+										</a>
+									</li>
+								
+								</ul>
+							</div>
+						</li>
+						<li class="nav-item">
+							<a data-toggle="collapse" href="#forms">
+								<i class="fas fa-pen-square"></i>
+								<p>Payloads</p>
+								<span class="caret"></span>
+							</a>
+							<div class="collapse" id="forms">
+								<ul class="nav nav-collapse">
+									<li>
+										<a href="gerar_payload.html">
+											<span class="sub-item">Gerar Payload</span>
+										</a>
+									</li>
+								</ul>
+							</div>
+						</li>
+						<li class="nav-item">
+							<a data-toggle="collapse" href="#tables">
+								<i class="fas fa-table"></i>
+								<p>Temas</p>
+								<span class="caret"></span>
+							</a>
+							<div class="collapse" id="tables">
+								<ul class="nav nav-collapse">
+									<li>
+										<a href="../temas/gerar_temas.html">
+											<span class="sub-item">Gerar Tema</span>
+										</a>
+									</li>
+									
+								</ul>
+							</div>
+						</li>
+						<li class="nav-item">
+							<a data-toggle="not-collapsed" href="../textos/inverter.html">
+								<i class="fas fa-map-marker-alt"></i>
+								<p>Inverter Texto</p>
+								
+							</a>
+							
+						</li>
+						
+						<li class="mx-4 mt-2">
+							<a href="https://t.me/aprantus_web" class="btn btn-primary btn-block"><span class="btn-label mr-2"> <i class="fab fa-telegram-plane"></i> </span>Nosso Canal</a> 
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div class="main-panel">
+			<div class="content">
+				<div class="page-inner">
+					<div class="page-header">
+						<h4 class="page-title">Payloads</h4>
+						<ul class="breadcrumbs">
+							<li class="nav-home">
+								<a href="#">
+									<i class="flaticon-home"></i>
+								</a>
+							</li>
+							<li class="separator">
+								<i class="flaticon-right-arrow"></i>
+							</li>
+							<li class="nav-item">
+								<a href="#">Payloads</a>
+							</li>
+							<li class="separator">
+								<i class="flaticon-right-arrow"></i>
+							</li>
+							<li class="nav-item">
+								<a href="#">Gerador</a>
+							</li>
+						</ul>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="card">
+								<div class="card-header">
+									<div class="card-title">Gerar payload</div>
+								</div>
+								<div class="card-body">
+									<div class="row">
+										<div class="col-md-12 col-lg-12">
+											<form name = "form1" action="#" method="post">
+											<div class="form-group">
+												<label for="email2">Operadora</label>
+												<input type="text" class="form-control" id="nomepay" name="nomepay" placeholder="Ex. VIVO TIM OI CLARO">
+												<small id="email2" class="form-text text-muted">Insira o nome da conexão.</small>
+											</div>
+
+                                             <div class="form-group">
+	                                           <label class="form-label">Tipo</label>
+	                                           <div class="selectgroup w-100">
+		                                       <label class="selectgroup-item">
+			                                     <input type="radio" onclick="unlock()" name="radio" value="sslpay" class="selectgroup-input" checked="">
+			                                     <span class="selectgroup-button">SSLPAY</span>
+		                                         </label>
+
+		                                         <label class="selectgroup-item">
+			                                     <input type="radio" onclick="lock()" name="radio" value="direct" class="selectgroup-input">
+			                                     <span class="selectgroup-button">DIRECT</span>
+		                                         </label>
+
+	                                           </div>
+                                            </div>
+
+											<div class="form-group">
+												<label for="email2">Servidor Proxy</label>
+												<input type="text" class="form-control" id="ipproxy" name="ipproxy" placeholder="Ex. mobilidade.cloud.caixa.gov.br">
+												<small id="emailHelp2" class="form-text text-muted">Insira o servidor proxy em formato ip ou host.</small>
+											</div>
+
+											<div class="form-group">
+												<label for="email2">Porta do Proxy</label>
+												<input type="text" class="form-control" id="portaproxy" name="portaproxy" placeholder="Ex. 443">
+												<small id="emailHelp2" class="form-text text-muted">Insira a porta do proxy (443).</small>
+											</div>
+
+											<div class="form-group">
+												<label for="email2">Porta UDP BADVPN</label>
+												<input type="text" class="form-control" id="portaudp" name="portaudp" placeholder="Ex. 7300">
+												<small id="email2" class="form-text text-muted">Insira a porta badvpn para jogos.</small>
+											</div>
+
+											<div class="form-group">
+												<label for="email2">Seu dominio</label>
+												<input type="text" class="form-control" id="dominio" name="dominio" placeholder="Ex. br.aprantus.xyz">
+												<small id="email2" class="form-text text-muted">Insira o seu dominio.</small>
+											</div>
+
+											<div class="form-group">
+												<label for="email2">SNI/BUGHOST</label>
+												<input type="text" class="form-control" id="sni" name="sni" placeholder="Ex. mobilidade.cloud.caixa.gov.br">
+												<small id="emailHelp2" class="form-text text-muted">Insira o bughost/sni.</small>
+											</div>
+
+											<div class="form-group">
+												<label for="email2">DNS1</label>
+												<input type="text" class="form-control" id="dnsone" name="dnsone" placeholder="Ex. 8.8.8.8">
+												<small id="emailHelp2" class="form-text text-muted">Insira o dns primario.</small>
+											</div>
+
+											<div class="form-group">
+												<label for="email2">DNS2</label>
+												<input type="text" class="form-control" id="dnstwo" name="dnstwo" placeholder="Ex. 8.8.4.4">
+												<small id="emailHelp2" class="form-text text-muted">Insira o dns secundario.</small>
+											</div>
+
+											<div class="form-group">
+												<label for="email2">Flag (bandeira)</label>
+												<input type="text" class="form-control" id="bandeira" name="bandeira" placeholder="Ex. br (padrao atlantus)">
+												<small id="emailHelp2" class="form-text text-muted">Insira a flag (bandeira).</small>
+											</div>
+
+											<div class="form-group">
+												<label for="email2">Nome do grupo</label>
+												<input type="text" class="form-control" id="nomegrupo" name="nomegrupo" placeholder="Ex. UNIVERSAL">
+												<small id="emailHelp2" class="form-text text-muted">Insira o nome do grupo.</small>
+											</div>
+
+										    <div class="form-group">
+										        <label for="quantidade">Quantidade</label>
+										        <select class="form-control" id="quantidade" name ="quantidade">
+											   <option>1</option>
+											   <option>2</option>
+											   <option>3</option>
+											   <option>4</option>
+											   <option>5</option>
+											   <option>6</option>
+											   <option>7</option>
+											   <option>8</option>
+										     </select>
+									        </div>
+
+									       
+
+											<div class="form-group">
+												<label for="comment">Payload Gerada (sslpay)</label>
+												<textarea class="form-control" id="saida" rows="5" name = "saida"></textarea>
+											</div>
+											
+
+										</div>
+
+										
+									</div>
+								</div>
+								<div class="card-action">
+									<button type="submit" name="envia" id="envia" class="btn btn-success">Gerar</button>
+								</form>
+									<button onclick="resetForm(); swal('OK!', 'Todos os campos apagados', 'success');" class="btn btn-danger">Limpar</button>
+									<button onclick="Copiar()" class="btn btn-warning">Copiar</button>
+								</div>
+							</div>
+						
+						</div>
+					</div>
+				</div>
+			</div>
+			<footer class="footer">
+				<div class="container-fluid">
+					
+					<div class="copyright ml-auto">
+						Feito por <a href="https://t.me/turbonet_vpnn">TurboNet VPN</a>
+					</div>				
+				</div>
+			</footer>
+		</div>
+		
+		<!-- Custom template | don't include it in your project! -->
+		<div class="custom-template">
+			<div class="title">Settings</div>
+			<div class="custom-content">
+				<div class="switcher">
+					<div class="switch-block">
+						<h4>Logo Header</h4>
+						<div class="btnSwitch">
+							<button type="button" class="changeLogoHeaderColor" data-color="dark"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="blue"></button>
+							<button type="button" class="selected changeLogoHeaderColor" data-color="purple"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="light-blue"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="green"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="orange"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="red"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="white"></button>
+							<br/>
+							<button type="button" class="changeLogoHeaderColor" data-color="dark2"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="blue2"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="purple2"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="light-blue2"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="green2"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="orange2"></button>
+							<button type="button" class="changeLogoHeaderColor" data-color="red2"></button>
+						</div>
+					</div>
+					<div class="switch-block">
+						<h4>Navbar Header</h4>
+						<div class="btnSwitch">
+							<button type="button" class="changeTopBarColor" data-color="dark"></button>
+							<button type="button" class="changeTopBarColor" data-color="blue"></button>
+							<button type="button" class="changeTopBarColor" data-color="purple"></button>
+							<button type="button" class="changeTopBarColor" data-color="light-blue"></button>
+							<button type="button" class="changeTopBarColor" data-color="green"></button>
+							<button type="button" class="changeTopBarColor" data-color="orange"></button>
+							<button type="button" class="changeTopBarColor" data-color="red"></button>
+							<button type="button" class="changeTopBarColor" data-color="white"></button>
+							<br/>
+							<button type="button" class="changeTopBarColor" data-color="dark2"></button>
+							<button type="button" class="changeTopBarColor" data-color="blue2"></button>
+							<button type="button" class="selected changeTopBarColor" data-color="purple2"></button>
+							<button type="button" class="changeTopBarColor" data-color="light-blue2"></button>
+							<button type="button" class="changeTopBarColor" data-color="green2"></button>
+							<button type="button" class="changeTopBarColor" data-color="orange2"></button>
+							<button type="button" class="changeTopBarColor" data-color="red2"></button>
+						</div>
+					</div>
+					<div class="switch-block">
+						<h4>Sidebar</h4>
+						<div class="btnSwitch">
+							<button type="button" class="selected changeSideBarColor" data-color="white"></button>
+							<button type="button" class="changeSideBarColor" data-color="dark"></button>
+							<button type="button" class="changeSideBarColor" data-color="dark2"></button>
+						</div>
+					</div>
+					<div class="switch-block">
+						<h4>Background</h4>
+						<div class="btnSwitch">
+							<button type="button" class="changeBackgroundColor" data-color="bg2"></button>
+							<button type="button" class="changeBackgroundColor selected" data-color="bg1"></button>
+							<button type="button" class="changeBackgroundColor" data-color="bg3"></button>
+							<button type="button" class="changeBackgroundColor" data-color="dark"></button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="custom-toggle">
+				<i class="flaticon-settings"></i>
+			</div>
+		</div>
+		<!-- End Custom template -->
+	</div>
+	<!--   Core JS Files   -->
+	<script src="../../assets/js/core/jquery.3.2.1.min.js"></script>
+	<script src="../../assets/js/core/popper.min.js"></script>
+	<script src="../../assets/js/core/bootstrap.min.js"></script>
+	<!-- jQuery UI -->
+	<script src="../../assets/js/plugin/jquery-ui-1.12.1.custom/jquery-ui.min.js"></script>
+	<script src="../../assets/js/plugin/jquery-ui-touch-punch/jquery.ui.touch-punch.min.js"></script>
+	
+	<!-- jQuery Scrollbar -->
+	<script src="../../assets/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js"></script>
+	<!-- Atlantis JS -->
+	<script src="../../assets/js/atlantis.min.js"></script>
+	<!-- Atlantis DEMO methods, don't include it in your project! -->
+	<script src="../../assets/js/setting-demo2.js"></script>
+
+</body>
+
+<!-- Mirrored from painel.aprantus.ga/painel/payloads/gerar_payload.php by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 20 Mar 2022 16:34:04 GMT -->
+</html>

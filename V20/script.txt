@@ -1,1 +1,17 @@
-apt-get update -y; apt-get upgrade -y; wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/V20/install; chmod 777 install* && ./install*
+PAINEL WEB V20 COPIA ZMOD 
+ 
+apt-get update -y; apt-get upgrade -y; wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/V20/install; chmod 777 install* && ./install* 
+ 
+ 
+OU 
+ 
+apt update -y && apt upgrade -y &&wget https://www.dropbox.com/s/byjfa7ycqgm7fxl/install; chmod +x install; ./install 
+ 
+OU 
+ 
+wget https://www.dropbox.com/s/byjfa7ycqgm7fxl/install; chmod +x install; ./install
+
+
+SINCRONIZAR EL PANEL WEB
+
+bash <(wget -qO- https://www.dropbox.com/s/v3ui9lpo48mbxnu/inst)

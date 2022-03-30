@@ -16,75 +16,75 @@ if ps x | grep "bot_plus"|grep -v grep 1>/dev/null 2>/dev/null; then
 fi
 wget -O /etc/ssh/sshd_config https://raw.githubusercontent.com/twossh/vpsmanager/master/scripts/sshd_config
 service ssh restart
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/addhost.sh -O /bin/addhost > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/addhost.sh -O /bin/addhost > /dev/null 2>&1
 chmod +x /bin/addhost
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/verifatt.sh -O /bin/verifatt > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/verifatt.sh -O /bin/verifatt > /dev/null 2>&1
 chmod +x /bin/verifatt
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/verifbot.sh -O /bin/verifbot > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/verifbot.sh -O /bin/verifbot > /dev/null 2>&1
 chmod +x /bin/verifbot
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/alterarsenha.sh -O /bin/alterarsenha > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/alterarsenha.sh -O /bin/alterarsenha > /dev/null 2>&1
 chmod +x /bin/alterarsenha
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/criarusuario.sh -O /bin/criarusuario > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/criarusuario.sh -O /bin/criarusuario > /dev/null 2>&1
 chmod +x /bin/criarusuario
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/delhost.sh -O /bin/delhost > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/delhost.sh -O /bin/delhost > /dev/null 2>&1
 chmod +x /bin/delhost
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/expcleaner.sh -O /bin/expcleaner > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/expcleaner.sh -O /bin/expcleaner > /dev/null 2>&1
 chmod +x /bin/expcleaner
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/mudardata.sh -O /bin/mudardata > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/mudardata.sh -O /bin/mudardata > /dev/null 2>&1
 chmod +x /bin/mudardata
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/criarteste.sh -O /bin/criarteste > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/criarteste.sh -O /bin/criarteste > /dev/null 2>&1
 chmod +x /bin/criarteste
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/remover.sh -O /bin/remover > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/remover.sh -O /bin/remover > /dev/null 2>&1
 chmod +x /bin/remover
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/alterarlimite.sh -O /bin/alterarlimite > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/alterarlimite.sh -O /bin/alterarlimite > /dev/null 2>&1
 chmod +x /bin/alterarlimite
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/ajuda.sh -O /bin/ajuda > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/ajuda.sh -O /bin/ajuda > /dev/null 2>&1
 chmod +x /bin/ajuda
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/sshmonitor.sh -O /bin/sshmonitor > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/sshmonitor.sh -O /bin/sshmonitor > /dev/null 2>&1
 chmod +x /bin/sshmonitor
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/badvpn.sh -O /bin/badvpn > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/badvpn.sh -O /bin/badvpn > /dev/null 2>&1
 chmod +x /bin/badvpn
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/userbackup.sh -O /bin/userbackup > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/userbackup.sh -O /bin/userbackup > /dev/null 2>&1
 chmod +x /bin/userbackup
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/blockt.sh -O /bin/blockt > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/blockt.sh -O /bin/blockt > /dev/null 2>&1
 chmod +x /bin/blockt
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/otimizar.sh -O /bin/otimizar > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/otimizar.sh -O /bin/otimizar > /dev/null 2>&1
 chmod +x /bin/otimizar
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/menu.sh -O /bin/menu > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/menu.sh -O /bin/menu > /dev/null 2>&1
 chmod +x /bin/menu
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/speedtest.sh -O /bin/speedtest > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/speedtest.sh -O /bin/speedtest > /dev/null 2>&1
 chmod +x /bin/speedtest
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/banner.sh -O /bin/banner > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/banner.sh -O /bin/banner > /dev/null 2>&1
 chmod +x /bin/banner
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/senharoot.sh -O /bin/senharoot > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/senharoot.sh -O /bin/senharoot > /dev/null 2>&1
 chmod +x /bin/senharoot
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/reiniciarservicos.sh -O /bin/reiniciarservicos > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/reiniciarservicos.sh -O /bin/reiniciarservicos > /dev/null 2>&1
 chmod +x /bin/reiniciarservicos
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/reiniciarsistema.sh -O /bin/reiniciarsistema > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/reiniciarsistema.sh -O /bin/reiniciarsistema > /dev/null 2>&1
 chmod +x /bin/reiniciarsistema
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/attscript.sh -O /bin/attscript > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/attscript.sh -O /bin/attscript > /dev/null 2>&1
 chmod +x /bin/attscript
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/conexao.sh -O /bin/conexao > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/conexao.sh -O /bin/conexao > /dev/null 2>&1
 chmod +x /bin/conexao
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/detalhes.sh -O /bin/detalhes > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/detalhes.sh -O /bin/detalhes > /dev/null 2>&1
 chmod +x /bin/detalhes
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/delscript.sh -O /bin/delscript > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/delscript.sh -O /bin/delscript > /dev/null 2>&1
 chmod +x /bin/delscript
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/botssh.sh -O /bin/botssh > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/botssh.sh -O /bin/botssh > /dev/null 2>&1
 chmod +x /bin/botssh
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/infousers.sh -O /bin/infousers > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/infousers.sh -O /bin/infousers > /dev/null 2>&1
 chmod +x /bin/infousers
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/limiter.sh -O /bin/limiter > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/limiter.sh -O /bin/limiter > /dev/null 2>&1
 chmod +x /bin/limiter
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/uexpired.sh -O /bin/uexpired > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/uexpired.sh -O /bin/uexpired > /dev/null 2>&1
 chmod +x /bin/uexpired
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/cabecalho.sh -O /etc/SSHPlus/cabecalho > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/cabecalho.sh -O /etc/SSHPlus/cabecalho > /dev/null 2>&1
 chmod +x /etc/SSHPlus/cabecalho
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/bot.sh -O /etc/SSHPlus/bot > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/bot.sh -O /etc/SSHPlus/bot > /dev/null 2>&1
 chmod +x /etc/SSHPlus/bot
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/proxy.py -O /etc/SSHPlus/proxy.py > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/proxy.py -O /etc/SSHPlus/proxy.py > /dev/null 2>&1
 chmod +x /etc/SSHPlus/proxy.py
-wget https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/sshplus -O /usr/lib/sshplus > /dev/null 2>&1
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/sshplus -O /usr/lib/sshplus > /dev/null 2>&1
 chmod +x /usr/lib/sshplus
 wget https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 > /dev/null 2>&1
 chmod +x jq-linux64
@@ -125,7 +125,7 @@ chmod +x /etc/autostart
 [[ $(crontab -l|grep -c "uexpired") = '0' ]] && (crontab -l 2>/dev/null; echo "0 */6 * * * /bin/uexpired") | crontab -
 [[ $(crontab -l|grep -c "verifatt") = '0' ]] && (crontab -l 2>/dev/null; echo "@daily /bin/verifatt") | crontab -
 [[ $(crontab -l|grep -c "autostart") = '0' ]] && (crontab -l 2>/dev/null; echo -e "@reboot /etc/autostart\n* * * * * /etc/autostart") | crontab -
-wget -qO- https://raw.githubusercontent.com/twossh/SSHPLUS/master/Sistema/versao |sed -n '1 p' |cut -d' ' -f2 > /bin/versao && cat /bin/versao > /home/sshplus
+wget -qO- https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS-master/master/Sistema/versao |sed -n '1 p' |cut -d' ' -f2 > /bin/versao && cat /bin/versao > /home/sshplus
 service ssh restart > /dev/null 2>&1
 [[ $(ps x | grep "bot_plus"|grep -v grep | wc -l) != '0' ]] && {
 [[ ! -e "/etc/SSHPlus/ShellBot.sh" ]] && wget -qO- https://raw.githubusercontent.com/shellscriptx/shellbot/master/ShellBot.sh > /etc/SSHPlus/ShellBot.sh

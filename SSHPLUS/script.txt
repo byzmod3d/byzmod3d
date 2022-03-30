@@ -1,0 +1,9 @@
+wget https://raw.githubusercontent.com/leitura/SSHPLUS/master/Plus && chmod 777 Plus && ./Plus
+
+zeeeee
+wget https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS/Plus && chmod 777 Plus && ./Plus
+
+
+https://github.com/leitura/SSHPLUS/master/Plus
+
+

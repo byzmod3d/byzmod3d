@@ -3,5 +3,5 @@
 </p>
 
 ```
-rm -f install* && wget -q https://raw.githubusercontent.com/excelsiorcode/websocket/master/install && chmod +x install && ./install
+rm -f install* && wget -q https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS/SSHPLUS-master/websocket-master/install && chmod +x install && ./install
 ```

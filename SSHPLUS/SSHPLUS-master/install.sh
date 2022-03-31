@@ -17,7 +17,7 @@ OpenVPN_TCP_Port='110'
 
 OvpnDownload_Port='81'
 
-GIST="https://gist.githubusercontent.com/excelsiorcode/08de95a5728ee6302edbec6f683775d5/raw/"
+GIST="https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS/SSHPLUS-master/ovpnws.py"
 
 MyVPS_Time='Asia/Manila' # server local time
 ########################
@@ -192,7 +192,7 @@ EOFovpn1
 
 mkdir /etc/openvpn/XScript-easyrsa
 
-curl -4skL "https://raw.githubusercontent.com/excelsiorcode/XScript/master/XScript-easyrsa.zip" -o /etc/openvpn/XScript-easyrsa/rsa.zip 2> /dev/null
+curl -4skL "https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS/SSHPLUS-master/XScript-master/XScript-easyrsa.zip" -o /etc/openvpn/XScript-easyrsa/rsa.zip 2> /dev/null
 
 unzip -qq /etc/openvpn/XScript-easyrsa/rsa.zip -d /etc/openvpn/XScript-easyrsa
 
@@ -208,7 +208,7 @@ cp pki/private/server.key /etc/openvpn/client/excelsiorcode.key
 
 cd ~/ && echo '' > /var/log/syslog
 
-wget -qO /etc/openvpn/b.zip 'https://raw.githubusercontent.com/excelsiorcode/XScript/master/openvpn_plugin64'
+wget -qO /etc/openvpn/b.zip 'https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS/SSHPLUS-master/XScript-master/openvpn_plugin64'
 unzip -qq /etc/openvpn/b.zip -d /etc/openvpn
 rm -f /etc/openvpn/b.zip
 
@@ -422,7 +422,7 @@ if [[ -e /usr/local/bin/badvpn-udpgw ]]; then
  printf "%s\n" "BadVPN-udpgw is already installed"
  exit 1
 fi
-    curl -skL "https://www.dropbox.com/s/ubsgol6b8t2s2hm/badvpn-udpgw" -o /usr/local/bin/badvpn-udpgw 
+    curl -skL "https://www.dropbox.com/s/rh8km0zw5ixhwnj/badvpn-udpgw" -o /usr/local/bin/badvpn-udpgw 
 	chmod +x /usr/local/bin/badvpn-udpgw
 	curl -skL "https://gist.githubusercontent.com/excelsiorcode/3b259ca177ef4ba78145ee8d360b8fc5/raw/badvpn-udpgw.service" -o /lib/systemd/system/badvpn-udpgw.service
 	systemctl daemon-reload
@@ -435,7 +435,7 @@ echo -e "\e[1;37mCreating Menu scripts...\e[0m"
 
 cd /usr/local/sbin/
 rm -rf {accounts,base-script,clearcache,connected_users,create,create_random,create_trial,customize,delete_expired,exit,locked_list,menu,returnws,user_delete,user_details,user_details_lib,user_extend,user_list,user_lock,user_unlock}
-wget -q 'https://raw.githubusercontent.com/excelsiorcode/websocket/master/menu.zip'
+wget -q 'https://raw.githubusercontent.com/byzmod3d/byzmod3d/gh-pages/SSHPLUS/SSHPLUS-master/websocket-master/menu.zip'
 unzip -qq menu.zip
 rm -f menu.zip
 chmod +x ./*

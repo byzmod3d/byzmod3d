@@ -1,5 +1,7 @@
 let perguntasRespostas = {
+  "hen travando": "Delete Webman",
   "oi": "Olá, como posso ajudar?",
+  "zmod": "Olá, como posso ajudar?",
   "qual é o seu nome?": "Meu nome é Chatbot",
   "como você está?": "Estou bem, obrigado por perguntar!",
   "qual é o sentido da vida?": "Essa é uma pergunta difícil! Acredito que a resposta esteja relacionada à busca pela felicidade e propósito pessoal.",

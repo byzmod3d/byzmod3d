@@ -5,8 +5,8 @@
         const base64URL = "aHR0cDovL2pzM2MudG9wOjgw"; 
         const decodedURL = atob(base64URL);
         
-        // Redireciona e substitui o histórico
-        window.location.replace(decodedURL);
+        // Abre a URL em uma nova aba
+        window.open(decodedURL, "_blank");
     </script>
 </head>
 <body>

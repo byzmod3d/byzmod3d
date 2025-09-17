@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor com Realce de Sintaxe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: #e0e0e0;
+        }
+        
+        .header {
+            background-color: #2b2b2b;
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+        }
+        
+        .menu-bar {
+            background-color: #3c3f41;
+            color: #ccc;
+            padding: 5px;
+            display: flex;
+        }
+        
+        .menu-item {
+            padding: 5px 15px;
+            cursor: pointer;
+        }
+        
+        .menu-item:hover {
+            background-color: #4e5254;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #1e1e1e;
+            position: relative;
+        }
+        
+        .editor-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .line-numbers {
+            background-color: #2d2d2d;
+            color: #6e7681;
+            padding: 10px 5px;
+            text-align: right;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow: hidden;
+            border-right: 1px solid #444;
+            user-select: none;
+            width: 40px;
+            flex-shrink: 0;
+        }
+        
+        #editor {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            background-color: transparent;
+            color: transparent;
+            caret-color: #e0e0e0;
+            position: absolute;
+            top: 0;
+            left: 40px;
+            width: calc(100% - 40px);
+            height: 100%;
+            z-index: 10;
+            tab-size: 4;
+            white-space: pre;
+            overflow: auto;
+        }
+        
+        .syntax-highlight {
+            position: absolute;
+            top: 0;
+            left: 40px;
+            width: calc(100% - 40px);
+            height: 100%;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            pointer-events: none;
+            white-space: pre;
+            overflow: hidden;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            z-index: 5;
+        }
+        
+        .status-bar {
+            background-color: #007acc;
+            color: white;
+            padding: 5px 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: #3c3f41;
+            padding: 20px;
+            border-radius: 5px;
+            width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+        }
+        
+        .close {
+            color: #aaa;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: white;
+        }
+        
+        .search-input-group {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .search-input {
+            padding: 8px;
+            flex: 1;
+            background-color: #2b2b2b;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            background-color: #007acc;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+            border-radius: 3px;
+        }
+        
+        .btn:hover {
+            background-color: #0062a3;
+        }
+        
+        .search-options {
+            display: flex;
+            margin: 10px 0;
+        }
+        
+        .option {
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        
+        .syntax-html { color: #e06c75; }
+        .syntax-php { color: #61afef; }
+        .syntax-comment { color: #5c6370; font-style: italic; }
+        .syntax-keyword { color: #c678dd; }
+        .syntax-string { color: #98c379; }
+        .syntax-variable { color: #e06c75; }
+        .syntax-function { color: #61afef; }
+        .syntax-tag { color: #e06c75; }
+        .syntax-attribute { color: #d19a66; }
+        .syntax-number { color: #d19a66; }
+        
+        .selection-highlight {
+            background-color: rgba(255, 255, 0, 0.3);
+            position: absolute;
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        .search-highlight {
+            background-color: rgba(255, 255, 0, 0.5);
+            position: absolute;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .info-text {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">Editor com Realce de Sintaxe</div>
+        <div class="window-controls">
+            <button class="btn" onclick="minimizeEditor()">-</button>
+            <button class="btn" onclick="toggleMaximize()">□</button>
+            <button class="btn" onclick="closeEditor()">×</button>
+        </div>
+    </div>
+    
+    <div class="menu-bar">
+        <div class="menu-item" onclick="toggleSearch()">Buscar</div>
+    </div>
+    
+    <div class="container">
+        <div class="editor-container">
+            <div class="editor-wrapper">
+                <div class="line-numbers" id="line-numbers">1</div>
+                <div class="syntax-highlight" id="syntax-highlight"></div>
+                <textarea id="editor" spellcheck="false" oninput="updateEditor()" onscroll="syncScroll()" onclick="updateStatusBar()" onkeyup="updateStatusBar()" onselect="highlightSelection()"></textarea>
+                <div class="info-text">Ctrl+F para buscar | Texto transparente para ver o realce</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div id="position">LN 1, COL 1</div>
+        <div id="language">PHP</div>
+        <div>UTF-8</div>
+    </div>
+
+    <div id="searchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Buscar e Substituir</h3>
+                <span class="close" onclick="closeSearch()">&times;</span>
+            </div>
+            <div class="search-input-group">
+                <input type="text" class="search-input" id="searchInput" placeholder="Buscar...">
+                <button class="btn" onclick="findText()">Buscar</button>
+            </div>
+            <div class="search-input-group">
+                <input type="text" class="search-input" id="replaceInput" placeholder="Substituir por...">
+                <button class="btn" onclick="replaceText()">Substituir</button>
+                <button class="btn" onclick="replaceAllText()">Substituir Tudo</button>
+            </div>
+            <div class="search-options">
+                <div class="option">
+                    <input type="checkbox" id="caseSensitive">
+                    <label for="caseSensitive">Diferenciar maiúsc/minúsc</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="wholeWord">
+                    <label for="wholeWord">Palavra inteira</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const syntaxHighlight = document.getElementById('syntax-highlight');
+        const lineNumbers = document.getElementById('line-numbers');
+        const searchModal = document.getElementById('searchModal');
+        const searchInput = document.getElementById('searchInput');
+        const positionElement = document.getElementById('position');
+        const languageElement = document.getElementById('language');
+        
+        // Inicializar números de linha e realce de sintaxe
+        updateLineNumbers();
+        highlightSyntax();
+        updateStatusBar();
+        
+        // Atualizar editor quando o conteúdo mudar
+        function updateEditor() {
+            updateLineNumbers();
+            highlightSyntax();
+            updateStatusBar();
+            highlightSelection();
+        }
+        
+        // Sincronizar scroll entre editor e realce de sintaxe
+        function syncScroll() {
+            syntaxHighlight.scrollTop = editor.scrollTop;
+            syntaxHighlight.scrollLeft = editor.scrollLeft;
+            lineNumbers.scrollTop = editor.scrollTop;
+        }
+        
+        function updateStatusBar() {
+            const text = editor.value;
+            const cursorPos = editor.selectionStart;
+            
+            // Calcular linha e coluna
+            const textUntilCursor = text.substring(0, cursorPos);
+            const lines = textUntilCursor.split('\n');
+            const line = lines.length;
+            const col = lines[lines.length - 1].length + 1;
+            
+            positionElement.textContent = `LN ${line}, COL ${col}`;
+            
+            // Detectar linguagem para a barra de status
+            const code = editor.value;
+            if (code.includes('<?php') || code.includes('<?=')) {
+                languageElement.textContent = 'PHP';
+            } else if (code.includes('</') || code.includes('/>') || code.includes('<html')) {
+                languageElement.textContent = 'HTML';
+            } else {
+                languageElement.textContent = 'Texto';
+            }
+        }
+        
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n');
+            let numbers = '';
+            
+            for (let i = 1; i <= lines.length; i++) {
+                numbers += i + '<br>';
+            }
+            
+            lineNumbers.innerHTML = numbers;
+        }
+        
+        function highlightSyntax() {
+            let code = editor.value;
+            
+            // Realce para PHP
+            if (code.includes('<?php') || code.includes('<?=')) {
+                code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                
+                // Palavras-chave do PHP
+                const phpKeywords = ['function', 'if', 'else', 'foreach', 'return', 'global', 'session_start', 'strtotime', 'time', 'isset', 'unset', 'preg_match', 'checkdate', 'exec', 'file_exists'];
+                phpKeywords.forEach(keyword => {
+                    const regex = new RegExp(`\\b${keyword}\\b`, 'g');
+                    code = code.replace(regex, `<span class="syntax-keyword">${keyword}</span>`);
+                });
+                
+                // Comentários
+                code = code.replace(/\/\*[\s\S]*?\*\//g, '<span class="syntax-comment">$&</span>');
+                code = code.replace(/\/\/.*$/gm, '<span class="syntax-comment">$&</span>');
+                code = code.replace(/#.*$/gm, '<span class="syntax-comment">$&</span>');
+                
+                // Strings
+                code = code.replace(/'[^']*'|"[^"]*"/g, '<span class="syntax-string">$&</span>');
+                
+                // Variáveis
+                code = code.replace(/\$[a-zA-Z_][a-zA-Z0-9_]*/g, '<span class="syntax-variable">$&</span>');
+                
+                // Números
+                code = code.replace(/\b\d+\b/g, '<span class="syntax-number">$&</span>');
+                
+                // Tags PHP
+                code = code.replace(/&lt;\?php|\?&gt;/g, '<span class="syntax-php">$&</span>');
+                
+                syntaxHighlight.innerHTML = code;
+            } 
+            // Realce para HTML
+            else if (code.includes('</') || code.includes('/>') || code.includes('<html')) {
+                code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                
+                // Tags HTML
+                code = code.replace(/&lt;\/?[a-zA-Z0-9]+(\s+[a-zA-Z0-9]+=\"[^"]*\")*&gt;/g, '<span class="syntax-tag">$&</span>');
+                
+                // Atributos
+                code = code.replace(/[a-zA-Z-]+=/g, '<span class="syntax-attribute">$&</span>');
+                
+                syntaxHighlight.innerHTML = code;
+            } 
+            // Texto simples
+            else {
+                syntaxHighlight.innerHTML = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+        }
+        
+        // Destacar a seleção atual
+        function highlightSelection() {
+            // Limpar destaques anteriores
+            const oldHighlights = document.querySelectorAll('.selection-highlight');
+            oldHighlights.forEach(el => el.remove());
+            
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            
+            if (start !== end) {
+                // Calcular a posição da seleção
+                const textBefore = editor.value.substring(0, start);
+                const linesBefore = textBefore.split('\n');
+                const line = linesBefore.length;
+                const col = linesBefore[linesBefore.length - 1].length;
+                
+                // Criar elemento para destacar a seleção
+                const highlight = document.createElement('div');
+                highlight.className = 'selection-highlight';
+                
+                // Posicionar o destaque (simplificado)
+                highlight.style.top = (line * 21) + 'px';
+                highlight.style.left = (col * 8.5 + 40) + 'px';
+                highlight.style.width = ((end - start) * 8.5) + 'px';
+                highlight.style.height = '21px';
+                
+                document.querySelector('.editor-wrapper').appendChild(highlight);
+            }
+        }
+        
+        // Abrir painel de busca com Ctrl+F
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                toggleSearch();
+            }
+        });
+        
+        function toggleSearch() {
+            searchModal.style.display = searchModal.style.display === 'flex' ? 'none' : 'flex';
+            if (searchModal.style.display === 'flex') {
+                searchInput.focus();
+                searchInput.select();
+            } else {
+                editor.focus();
+            }
+        }
+        
+        function closeSearch() {
+            searchModal.style.display = 'none';
+            editor.focus();
+        }
+        
+        // Fechar modal ao clicar fora dele
+        window.addEventListener('click', function(e) {
+            if (e.target === searchModal) {
+                closeSearch();
+            }
+        });
+        
+        let lastMatch = null;
+        
+        function findText() {
+            const searchText = searchInput.value;
+            if (!searchText) return;
+            
+            const caseSensitive = document.getElementById('caseSensitive').checked;
+            const wholeWord = document.getElementById('wholeWord').checked;
+            
+            let searchRegex;
+            if (wholeWord) {
+                searchRegex = new RegExp(`\\b${escapeRegExp(searchText)}\\b`, caseSensitive ? 'g' : 'gi');
+            } else {
+                searchRegex = new RegExp(escapeRegExp(searchText), caseSensitive ? 'g' : 'gi');
+            }
+            
+            const text = editor.value;
+            
+            // Se temos uma última correspondência, começar a busca a partir dela
+            let startIndex = lastMatch ? lastMatch.index + lastMatch[0].length : 0;
+            if (startIndex >= text.length) startIndex = 0;
+            
+            searchRegex.lastIndex = startIndex;
+            const match = searchRegex.exec(text);
+            
+            if (match) {
+                lastMatch = match;
+                editor.focus();
+                editor.setSelectionRange(match.index, match.index + match[0].length);
+                
+                // Scroll para a seleção
+                const lineHeight = parseInt(getComputedStyle(editor).lineHeight);
+                const linesBefore = text.substring(0, match.index).split('\n').length - 1;
+                editor.scrollTop = linesBefore * lineHeight;
+                
+                highlightSelection();
+            } else {
+                // Se não encontrou, recomeçar do início
+                if (startIndex > 0) {
+                    lastMatch = null;
+                    findText();
+                } else {
+                    alert('Texto não encontrado!');
+                }
+            }
+        }
+        
+        function replaceText() {
+            const searchText = searchInput.value;
+            const replaceText = document.getElementById('replaceInput').value;
+            
+            if (!searchText) return;
+            
+            // Se há texto selecionado que corresponde ao termo de busca
+            const selectedText = editor.value.substring(
+                editor.selectionStart, 
+                editor.selectionEnd
+            );
+            
+            const caseSensitive = document.getElementById('caseSensitive').checked;
+            const wholeWord = document.getElementById('wholeWord').checked;
+            
+            let searchRegex;
+            if (wholeWord) {
+                searchRegex = new RegExp(`\\b${escapeRegExp(searchText)}\\b`, caseSensitive ? 'g' : 'gi');
+            } else {
+                searchRegex = new RegExp(escapeRegExp(searchText), caseSensitive ? 'g' : 'gi');
+            }
+            
+            if (searchRegex.test(selectedText)) {
+                editor.setRangeText(replaceText);
+                highlightSyntax();
+                lastMatch = null;
+                findText(); // Encontrar próxima ocorrência
+            } else {
+                findText(); // Encontrar primeira ocorrência
+            }
+        }
+        
+        function replaceAllText() {
+            const searchText = searchInput.value;
+            const replaceText = document.getElementById('replaceInput').value;
+            
+            if (!searchText) return;
+            
+            const caseSensitive = document.getElementById('caseSensitive').checked;
+            const wholeWord = document.getElementById('wholeWord').checked;
+            
+            let searchRegex;
+            if (wholeWord) {
+                searchRegex = new RegExp(`\\b${escapeRegExp(searchText)}\\b`, caseSensitive ? 'g' : 'gi');
+            } else {
+                searchRegex = new RegExp(escapeRegExp(searchText), caseSensitive ? 'g' : 'gi');
+            }
+            
+            const newText = editor.value.replace(searchRegex, replaceText);
+            editor.value = newText;
+            highlightSyntax();
+            updateLineNumbers();
+            lastMatch = null;
+        }
+        
+        // Função auxiliar para escapar caracteres especiais em regex
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        
+        // Funções para os botões de controle da janela
+        function minimizeEditor() {
+            alert('Editor minimizado (simulação)');
+        }
+        
+        function toggleMaximize() {
+            document.body.classList.toggle('maximized');
+        }
+        
+        function closeEditor() {
+            if (confirm('Deseja sair do editor?')) {
+                alert('Editor fechado (simulação)');
+            }
+        }
+        
+        // Inicializar a barra de status
+        updateStatusBar();
+        
+        // Adicionar texto de exemplo para teste
+        editor.value = ``;
+        updateEditor();
+    </script>
+</body>
+</html>

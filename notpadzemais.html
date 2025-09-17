@@ -35,6 +35,8 @@
             color: #ccc;
             padding: 5px;
             display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .menu-item {
@@ -44,6 +46,22 @@
         
         .menu-item:hover {
             background-color: #4e5254;
+        }
+        
+        .search-button {
+            background-color: #007acc;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .search-button:hover {
+            background-color: #0062a3;
         }
         
         .container {
@@ -147,7 +165,8 @@
             background-color: #3c3f41;
             padding: 20px;
             border-radius: 5px;
-            width: 500px;
+            width: 90%;
+            max-width: 500px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
         
@@ -174,25 +193,34 @@
         .search-input-group {
             display: flex;
             margin-bottom: 10px;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        @media (min-width: 768px) {
+            .search-input-group {
+                flex-direction: row;
+            }
         }
         
         .search-input {
-            padding: 8px;
+            padding: 10px;
             flex: 1;
             background-color: #2b2b2b;
             color: white;
             border: 1px solid #555;
             border-radius: 3px;
+            font-size: 16px; /* Melhor para mobile */
         }
         
         .btn {
-            padding: 8px 15px;
+            padding: 10px 15px;
             background-color: #007acc;
             color: white;
             border: none;
             cursor: pointer;
-            margin-left: 5px;
             border-radius: 3px;
+            font-size: 16px; /* Melhor para mobile */
         }
         
         .btn:hover {
@@ -202,16 +230,20 @@
         .search-options {
             display: flex;
             margin: 10px 0;
+            flex-wrap: wrap;
         }
         
         .option {
             margin-right: 15px;
             display: flex;
             align-items: center;
+            margin-bottom: 10px;
         }
         
         input[type="checkbox"] {
             margin-right: 5px;
+            width: 18px;
+            height: 18px;
         }
         
         .syntax-html { color: #e06c75; }
@@ -249,6 +281,28 @@
             font-size: 12px;
             z-index: 20;
         }
+        
+        /* Estilo para mobile */
+        @media (max-width: 767px) {
+            .menu-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-button {
+                margin-top: 5px;
+                justify-content: center;
+            }
+            
+            .modal-content {
+                width: 95%;
+                padding: 15px;
+            }
+            
+            .btn {
+                padding: 12px 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -263,6 +317,9 @@
     
     <div class="menu-bar">
         <div class="menu-item" onclick="toggleSearch()">Buscar</div>
+        <button class="search-button" onclick="toggleSearch()">
+            <span>🔍</span> Buscar (Ctrl+F)
+        </button>
     </div>
     
     <div class="container">
@@ -610,7 +667,18 @@
         updateStatusBar();
         
         // Adicionar texto de exemplo para teste
-        editor.value = ``;
+        editor.value = `<?php
+// Exemplo de código PHP
+function calcularSoma($a, $b) {
+    // Esta função retorna a soma de dois números
+    return $a + $b;
+}
+
+$resultado = calcularSoma(5, 3);
+echo "O resultado é: " . $resultado;
+
+// Busque por: xhr.send('ajax_action=add_dias_revenda&revenda=' + encodeURIComponent(revenda) + '&dias='
+?>`;
         updateEditor();
     </script>
 </body>

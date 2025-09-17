@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor com Realce de Sintaxe</title>
+    <title></title>
     <style>
         * {
             margin: 0;
@@ -166,7 +166,7 @@
             padding: 20px;
             border-radius: 5px;
             width: 90%;
-            max-width: 500px;
+            max-width: 600px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
         
@@ -197,6 +197,33 @@
             gap: 10px;
         }
         
+        .search-results-info {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .search-navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .search-options {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
         @media (min-width: 768px) {
             .search-input-group {
                 flex-direction: row;
@@ -210,7 +237,21 @@
             color: white;
             border: 1px solid #555;
             border-radius: 3px;
-            font-size: 16px; /* Melhor para mobile */
+            font-size: 16px;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .search-textarea {
+            padding: 10px;
+            flex: 1;
+            background-color: #2b2b2b;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 3px;
+            font-size: 14px;
+            font-family: 'Consolas', monospace;
+            min-height: 100px;
+            resize: vertical;
         }
         
         .btn {
@@ -220,30 +261,63 @@
             border: none;
             cursor: pointer;
             border-radius: 3px;
-            font-size: 16px; /* Melhor para mobile */
+            font-size: 16px;
+            transition: all 0.2s ease;
         }
         
         .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary {
+            background-color: #007acc;
+        }
+        
+        .btn-primary:hover {
             background-color: #0062a3;
         }
         
-        .search-options {
-            display: flex;
-            margin: 10px 0;
-            flex-wrap: wrap;
+        .btn-secondary {
+            background-color: #6c757d;
         }
         
-        .option {
-            margin-right: 15px;
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
+        .btn-secondary:hover {
+            background-color: #5a6268;
         }
         
-        input[type="checkbox"] {
-            margin-right: 5px;
-            width: 18px;
-            height: 18px;
+        .btn-success {
+            background-color: #28a745;
+        }
+        
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+        
+        .btn-f3 {
+            background-color: #4caf50;
+            display: none;
+        }
+        
+        .btn-f3:hover {
+            background-color: #45a049;
         }
         
         .syntax-html { color: #e06c75; }
@@ -264,11 +338,15 @@
             pointer-events: none;
         }
         
-        .search-highlight {
-            background-color: rgba(255, 255, 0, 0.5);
+        .occurrence-highlight {
+            background-color: rgba(255, 215, 0, 0.2);
             position: absolute;
             z-index: 1;
             pointer-events: none;
+        }
+        
+        .current-occurrence {
+            background-color: rgba(255, 165, 0, 0.4) !important;
         }
         
         .info-text {
@@ -302,16 +380,39 @@
             .btn {
                 padding: 12px 15px;
             }
+            
+            .btn-f3 {
+                display: block;
+                position: fixed;
+                bottom: 50px;
+                right: 20px;
+                z-index: 25;
+                padding: 12px 16px;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                font-weight: bold;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            }
+            
+            .search-navigation {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="logo">Editor com Realce de Sintaxe</div>
+        <div class="logo"></div>
         <div class="window-controls">
-            <button class="btn" onclick="minimizeEditor()">-</button>
-            <button class="btn" onclick="toggleMaximize()">□</button>
-            <button class="btn" onclick="closeEditor()">×</button>
+            <button class="btn btn-secondary" onclick="minimizeEditor()">-</button>
+            <button class="btn btn-secondary" onclick="toggleMaximize()">□</button>
+            <button class="btn btn-danger" onclick="closeEditor()">×</button>
         </div>
     </div>
     
@@ -346,26 +447,30 @@
                 <span class="close" onclick="closeSearch()">&times;</span>
             </div>
             <div class="search-input-group">
-                <input type="text" class="search-input" id="searchInput" placeholder="Buscar...">
-                <button class="btn" onclick="findText()">Buscar</button>
-            </div>
-            <div class="search-input-group">
-                <input type="text" class="search-input" id="replaceInput" placeholder="Substituir por...">
-                <button class="btn" onclick="replaceText()">Substituir</button>
-                <button class="btn" onclick="replaceAllText()">Substituir Tudo</button>
+                <textarea class="search-textarea" id="searchInput" placeholder="Buscar... (suporta múltiplas linhas)" oninput="findAllOccurrences()"></textarea>
             </div>
             <div class="search-options">
-                <div class="option">
-                    <input type="checkbox" id="caseSensitive">
-                    <label for="caseSensitive">Diferenciar maiúsc/minúsc</label>
-                </div>
-                <div class="option">
-                    <input type="checkbox" id="wholeWord">
-                    <label for="wholeWord">Palavra inteira</label>
-                </div>
+                <input type="checkbox" id="ignoreWhitespace" checked>
+                <label for="ignoreWhitespace">Ignorar diferenças de espaçamento e quebras de linha</label>
+            </div>
+            <div class="search-results-info" id="searchResultsInfo"></div>
+            <div class="search-input-group">
+                <textarea class="search-textarea" id="replaceInput" placeholder="Substituir por... (suporta múltiplas linhas)"></textarea>
+            </div>
+            <div class="search-navigation">
+                <button class="btn btn-secondary" onclick="findPrevious()">Anterior</button>
+                <button class="btn btn-primary" onclick="findText()">Buscar</button>
+                <button class="btn btn-secondary" onclick="findNext()">Próximo (F3)</button>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-success" onclick="replaceText()">Substituir</button>
+                <button class="btn btn-warning" onclick="replaceAllText()">Substituir Tudo</button>
+                <button class="btn btn-danger" onclick="clearSearch()">Limpar</button>
             </div>
         </div>
     </div>
+
+    <button class="btn btn-success btn-f3" id="f3Button" onclick="findNext()">F3</button>
 
     <script>
         const editor = document.getElementById('editor');
@@ -373,8 +478,16 @@
         const lineNumbers = document.getElementById('line-numbers');
         const searchModal = document.getElementById('searchModal');
         const searchInput = document.getElementById('searchInput');
+        const replaceInput = document.getElementById('replaceInput');
         const positionElement = document.getElementById('position');
         const languageElement = document.getElementById('language');
+        const searchResultsInfo = document.getElementById('searchResultsInfo');
+        const f3Button = document.getElementById('f3Button');
+        const ignoreWhitespace = document.getElementById('ignoreWhitespace');
+        
+        let allMatches = [];
+        let currentMatchIndex = -1;
+        let lastSearchText = '';
         
         // Inicializar números de linha e realce de sintaxe
         updateLineNumbers();
@@ -387,6 +500,11 @@
             highlightSyntax();
             updateStatusBar();
             highlightSelection();
+            
+            // Se houver uma busca ativa, atualizar as ocorrências
+            if (lastSearchText) {
+                findAllOccurrences();
+            }
         }
         
         // Sincronizar scroll entre editor e realce de sintaxe
@@ -511,11 +629,235 @@
             }
         }
         
+        // Normalizar texto ignorando diferenças de espaçamento
+        function normalizeText(text) {
+            if (!ignoreWhitespace.checked) return text;
+            
+            // Substituir múltiplos espaços/tabs por um único espaço
+            // e normalizar quebras de linha
+            return text
+                .replace(/\s+/g, ' ')
+                .replace(/\r\n/g, '\n')
+                .trim();
+        }
+        
+        // Encontrar todas as ocorrências do texto buscado
+        function findAllOccurrences() {
+            let searchText = searchInput.value;
+            
+            // Limpar destaques anteriores
+            const oldHighlights = document.querySelectorAll('.occurrence-highlight');
+            oldHighlights.forEach(el => el.remove());
+            
+            if (!searchText) {
+                searchResultsInfo.textContent = '';
+                allMatches = [];
+                currentMatchIndex = -1;
+                return;
+            }
+            
+            const text = editor.value;
+            allMatches = [];
+            
+            // Se a opção "ignorar espaçamento" estiver ativa, normalizar ambos os textos
+            const normalizedSearch = normalizeText(searchText);
+            const normalizedText = ignoreWhitespace.checked ? normalizeText(text) : text;
+            
+            let searchIndex = 0;
+            
+            if (ignoreWhitespace.checked) {
+                // Busca normalizada - ignora diferenças de espaçamento
+                while (searchIndex < normalizedText.length) {
+                    const foundIndex = normalizedText.indexOf(normalizedSearch, searchIndex);
+                    
+                    if (foundIndex === -1) break;
+                    
+                    // Encontrar a posição correspondente no texto original
+                    // Esta é uma aproximação - em casos complexos pode não ser 100% precisa
+                    const originalIndex = findOriginalPosition(normalizedText, text, foundIndex, normalizedSearch.length);
+                    
+                    if (originalIndex !== -1) {
+                        allMatches.push({
+                            index: originalIndex,
+                            length: searchText.length, // Usar o comprimento original
+                            isNormalized: true
+                        });
+                    }
+                    
+                    searchIndex = foundIndex + normalizedSearch.length;
+                }
+            } else {
+                // Busca exata
+                let index = text.indexOf(searchText);
+                
+                while (index !== -1) {
+                    allMatches.push({
+                        index: index,
+                        length: searchText.length
+                    });
+                    index = text.indexOf(searchText, index + searchText.length);
+                }
+            }
+            
+            updateSearchResultsInfo();
+            highlightAllOccurrences();
+        }
+        
+        // Encontrar a posição no texto original correspondente à posição no texto normalizado
+        function findOriginalPosition(normalizedText, originalText, normalizedIndex, length) {
+            // Esta é uma implementação simplificada
+            // Para uma solução mais robusta, seria necessário mapear caracter por caracter
+            let originalIndex = 0;
+            let normalizedCount = 0;
+            
+            for (let i = 0; i < originalText.length; i++) {
+                if (normalizedCount === normalizedIndex) {
+                    return i;
+                }
+                
+                // Avançar no texto normalizado
+                if (originalText[i].match(/\s/)) {
+                    // Se for espaço, pular múltiplos espaços no texto normalizado
+                    if (normalizedCount < normalizedText.length && normalizedText[normalizedCount] === ' ') {
+                        normalizedCount++;
+                    }
+                    
+                    // Pular espaços consecutivos no original
+                    while (i + 1 < originalText.length && originalText[i + 1].match(/\s/)) {
+                        i++;
+                    }
+                } else {
+                    // Caracter normal - avançar ambos
+                    if (normalizedCount < normalizedText.length) {
+                        normalizedCount++;
+                    }
+                }
+            }
+            
+            return -1;
+        }
+        
+        // Destacar todas as ocorrências encontradas
+        function highlightAllOccurrences() {
+            // Limpar destaques anteriores
+            const oldHighlights = document.querySelectorAll('.occurrence-highlight');
+            oldHighlights.forEach(el => el.remove());
+            
+            const text = editor.value;
+            
+            for (let i = 0; i < allMatches.length; i++) {
+                const match = allMatches[i];
+                const start = match.index;
+                const end = start + match.length;
+                
+                // Calcular posição para destacar
+                const textBefore = text.substring(0, start);
+                const linesBefore = textBefore.split('\n');
+                const line = linesBefore.length;
+                const col = linesBefore[linesBefore.length - 1].length;
+                
+                // Calcular altura (número de linhas)
+                const matchText = text.substring(start, end);
+                const linesInMatch = matchText.split('\n').length;
+                
+                // Criar elemento para destacar a ocorrência
+                const highlight = document.createElement('div');
+                highlight.className = 'occurrence-highlight';
+                if (i === currentMatchIndex) {
+                    highlight.classList.add('current-occurrence');
+                }
+                
+                // Posicionar o destaque
+                highlight.style.top = (line * 21) + 'px';
+                highlight.style.left = (col * 8.5 + 40) + 'px';
+                
+                // Se ocupa múltiplas linhas, calcular largura e altura apropriadas
+                if (linesInMatch === 1) {
+                    highlight.style.width = (match.length * 8.5) + 'px';
+                    highlight.style.height = '21px';
+                } else {
+                    // Para múltiplas linhas, vamos simplificar e usar largura total
+                    highlight.style.width = 'calc(100% - 40px)';
+                    highlight.style.height = (linesInMatch * 21) + 'px';
+                }
+                
+                document.querySelector('.editor-wrapper').appendChild(highlight);
+            }
+        }
+        
+        // Atualizar informações dos resultados da busca
+        function updateSearchResultsInfo() {
+            if (allMatches.length === 0) {
+                if (searchInput.value) {
+                    searchResultsInfo.textContent = 'Nenhuma ocorrência encontrada';
+                    searchResultsInfo.style.color = '#e06c75';
+                } else {
+                    searchResultsInfo.textContent = '';
+                }
+                currentMatchIndex = -1;
+            } else {
+                if (currentMatchIndex === -1) {
+                    currentMatchIndex = 0;
+                }
+                searchResultsInfo.textContent = `${currentMatchIndex + 1} de ${allMatches.length} ocorrências`;
+                searchResultsInfo.style.color = '#98c379';
+            }
+        }
+        
+        // Navegar para a próxima ocorrência
+        function findNext() {
+            if (allMatches.length === 0) {
+                findAllOccurrences();
+            }
+            
+            if (allMatches.length > 0) {
+                currentMatchIndex = (currentMatchIndex + 1) % allMatches.length;
+                goToMatch(currentMatchIndex);
+            }
+        }
+        
+        // Navegar para a ocorrência anterior
+        function findPrevious() {
+            if (allMatches.length === 0) {
+                findAllOccurrences();
+            }
+            
+            if (allMatches.length > 0) {
+                currentMatchIndex = (currentMatchIndex - 1 + allMatches.length) % allMatches.length;
+                goToMatch(currentMatchIndex);
+            }
+        }
+        
+        // Ir para uma ocorrência específica
+        function goToMatch(index) {
+            if (index < 0 || index >= allMatches.length) return;
+            
+            const match = allMatches[index];
+            editor.focus();
+            editor.setSelectionRange(match.index, match.index + match.length);
+            
+            // Scroll para a seleção
+            const lineHeight = parseInt(getComputedStyle(editor).lineHeight);
+            const linesBefore = editor.value.substring(0, match.index).split('\n').length - 1;
+            editor.scrollTop = linesBefore * lineHeight;
+            
+            updateSearchResultsInfo();
+            highlightAllOccurrences();
+            highlightSelection();
+        }
+        
         // Abrir painel de busca com Ctrl+F
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 'f') {
                 e.preventDefault();
                 toggleSearch();
+            } else if (e.key === 'F3') {
+                e.preventDefault();
+                if (searchModal.style.display === 'flex') {
+                    findNext();
+                } else if (lastSearchText) {
+                    findNext();
+                }
             }
         });
         
@@ -524,6 +866,10 @@
             if (searchModal.style.display === 'flex') {
                 searchInput.focus();
                 searchInput.select();
+                // Se já havia uma busca, atualizar as ocorrências
+                if (searchInput.value) {
+                    findAllOccurrences();
+                }
             } else {
                 editor.focus();
             }
@@ -531,6 +877,30 @@
         
         function closeSearch() {
             searchModal.style.display = 'none';
+            editor.focus();
+            
+            // Limpar os destaques de ocorrências ao fechar a busca
+            const oldHighlights = document.querySelectorAll('.occurrence-highlight');
+            oldHighlights.forEach(el => el.remove());
+            
+            allMatches = [];
+            currentMatchIndex = -1;
+        }
+        
+        // Função para limpar a busca
+        function clearSearch() {
+            searchInput.value = '';
+            replaceInput.value = '';
+            
+            // Limpar os destaques de ocorrências
+            const oldHighlights = document.querySelectorAll('.occurrence-highlight');
+            oldHighlights.forEach(el => el.remove());
+            
+            allMatches = [];
+            currentMatchIndex = -1;
+            searchResultsInfo.textContent = '';
+            
+            // Focar no editor
             editor.focus();
         }
         
@@ -541,56 +911,21 @@
             }
         });
         
-        let lastMatch = null;
-        
         function findText() {
-            const searchText = searchInput.value;
-            if (!searchText) return;
+            lastSearchText = searchInput.value;
+            findAllOccurrences();
             
-            const caseSensitive = document.getElementById('caseSensitive').checked;
-            const wholeWord = document.getElementById('wholeWord').checked;
-            
-            let searchRegex;
-            if (wholeWord) {
-                searchRegex = new RegExp(`\\b${escapeRegExp(searchText)}\\b`, caseSensitive ? 'g' : 'gi');
-            } else {
-                searchRegex = new RegExp(escapeRegExp(searchText), caseSensitive ? 'g' : 'gi');
-            }
-            
-            const text = editor.value;
-            
-            // Se temos uma última correspondência, começar a busca a partir dela
-            let startIndex = lastMatch ? lastMatch.index + lastMatch[0].length : 0;
-            if (startIndex >= text.length) startIndex = 0;
-            
-            searchRegex.lastIndex = startIndex;
-            const match = searchRegex.exec(text);
-            
-            if (match) {
-                lastMatch = match;
-                editor.focus();
-                editor.setSelectionRange(match.index, match.index + match[0].length);
-                
-                // Scroll para a seleção
-                const lineHeight = parseInt(getComputedStyle(editor).lineHeight);
-                const linesBefore = text.substring(0, match.index).split('\n').length - 1;
-                editor.scrollTop = linesBefore * lineHeight;
-                
-                highlightSelection();
-            } else {
-                // Se não encontrou, recomeçar do início
-                if (startIndex > 0) {
-                    lastMatch = null;
-                    findText();
-                } else {
-                    alert('Texto não encontrado!');
-                }
+            if (allMatches.length > 0) {
+                goToMatch(0);
+            } else if (searchInput.value) {
+                searchResultsInfo.textContent = 'Texto não encontrado!';
+                searchResultsInfo.style.color = '#e06c75';
             }
         }
         
         function replaceText() {
             const searchText = searchInput.value;
-            const replaceText = document.getElementById('replaceInput').value;
+            const replaceText = replaceInput.value;
             
             if (!searchText) return;
             
@@ -600,21 +935,26 @@
                 editor.selectionEnd
             );
             
-            const caseSensitive = document.getElementById('caseSensitive').checked;
-            const wholeWord = document.getElementById('wholeWord').checked;
+            // Verificar se a seleção atual corresponde ao texto de busca
+            // (considerando normalização se necessário)
+            let selectionMatches = false;
             
-            let searchRegex;
-            if (wholeWord) {
-                searchRegex = new RegExp(`\\b${escapeRegExp(searchText)}\\b`, caseSensitive ? 'g' : 'gi');
+            if (ignoreWhitespace.checked) {
+                selectionMatches = normalizeText(selectedText) === normalizeText(searchText);
             } else {
-                searchRegex = new RegExp(escapeRegExp(searchText), caseSensitive ? 'g' : 'gi');
+                selectionMatches = selectedText === searchText;
             }
             
-            if (searchRegex.test(selectedText)) {
+            if (selectionMatches) {
                 editor.setRangeText(replaceText);
                 highlightSyntax();
-                lastMatch = null;
-                findText(); // Encontrar próxima ocorrência
+                updateLineNumbers();
+                
+                // Atualizar a busca após a substituição
+                findAllOccurrences();
+                if (allMatches.length > 0) {
+                    findNext();
+                }
             } else {
                 findText(); // Encontrar primeira ocorrência
             }
@@ -622,30 +962,62 @@
         
         function replaceAllText() {
             const searchText = searchInput.value;
-            const replaceText = document.getElementById('replaceInput').value;
+            const replaceText = replaceInput.value;
             
             if (!searchText) return;
             
-            const caseSensitive = document.getElementById('caseSensitive').checked;
-            const wholeWord = document.getElementById('wholeWord').checked;
+            const text = editor.value;
+            let newText = text;
+            let count = 0;
             
-            let searchRegex;
-            if (wholeWord) {
-                searchRegex = new RegExp(`\\b${escapeRegExp(searchText)}\\b`, caseSensitive ? 'g' : 'gi');
+            if (ignoreWhitespace.checked) {
+                // Substituição normalizada - mais complexa
+                const normalizedSearch = normalizeText(searchText);
+                const normalizedText = normalizeText(text);
+                
+                let searchIndex = 0;
+                let lastIndex = 0;
+                let result = '';
+                
+                while (searchIndex < normalizedText.length) {
+                    const foundIndex = normalizedText.indexOf(normalizedSearch, searchIndex);
+                    
+                    if (foundIndex === -1) break;
+                    
+                    // Adicionar texto antes da ocorrência
+                    result += text.substring(lastIndex, foundIndex);
+                    
+                    // Adicionar texto de substituição
+                    result += replaceText;
+                    count++;
+                    
+                    // Avançar índices
+                    searchIndex = foundIndex + normalizedSearch.length;
+                    lastIndex = foundIndex + searchText.length; // Aproximação
+                }
+                
+                // Adicionar o restante do texto
+                result += text.substring(lastIndex);
+                newText = result;
             } else {
-                searchRegex = new RegExp(escapeRegExp(searchText), caseSensitive ? 'g' : 'gi');
+                // Substituição normal
+                newText = text.split(searchText).join(replaceText);
+                count = (text.match(new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
             }
             
-            const newText = editor.value.replace(searchRegex, replaceText);
-            editor.value = newText;
-            highlightSyntax();
-            updateLineNumbers();
-            lastMatch = null;
-        }
-        
-        // Função auxiliar para escapar caracteres especiais em regex
-        function escapeRegExp(string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (newText !== text) {
+                editor.value = newText;
+                highlightSyntax();
+                updateLineNumbers();
+                alert(`${count} ocorrência(s) substituída(s).`);
+                
+                // Limpar a busca após substituir tudo
+                allMatches = [];
+                currentMatchIndex = -1;
+                searchResultsInfo.textContent = '';
+            } else {
+                alert('Nenhuma ocorrência encontrada para substituir.');
+            }
         }
         
         // Funções para os botões de controle da janela

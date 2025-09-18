@@ -208,6 +208,7 @@
             justify-content: space-between;
             align-items: center;
             margin-top: 10px;
+            margin-bottom: 15px;
         }
         
         .search-options {
@@ -409,11 +410,7 @@
 <body>
     <div class="header">
         <div class="logo"></div>
-        <div class="window-controls">
-            <button class="btn btn-secondary" onclick="minimizeEditor()">-</button>
-            <button class="btn btn-secondary" onclick="toggleMaximize()">□</button>
-            <button class="btn btn-danger" onclick="closeEditor()">×</button>
-        </div>
+        <!-- Removidos os botões de controle da janela (- □ ×) -->
     </div>
     
     <div class="menu-bar">
@@ -446,6 +443,14 @@
                 <h3>Buscar e Substituir</h3>
                 <span class="close" onclick="closeSearch()">&times;</span>
             </div>
+            
+            <!-- Mover os botões de navegação para cima -->
+            <div class="search-navigation">
+                <button class="btn btn-secondary" onclick="findPrevious()">Anterior</button>
+                <button class="btn btn-primary" onclick="findText()">Buscar</button>
+                <button class="btn btn-secondary" onclick="findNext()">Próximo (F3)</button>
+            </div>
+            
             <div class="search-input-group">
                 <textarea class="search-textarea" id="searchInput" placeholder="Buscar... (suporta múltiplas linhas)" oninput="findAllOccurrences()"></textarea>
             </div>
@@ -457,11 +462,7 @@
             <div class="search-input-group">
                 <textarea class="search-textarea" id="replaceInput" placeholder="Substituir por... (suporta múltiplas linhas)"></textarea>
             </div>
-            <div class="search-navigation">
-                <button class="btn btn-secondary" onclick="findPrevious()">Anterior</button>
-                <button class="btn btn-primary" onclick="findText()">Buscar</button>
-                <button class="btn btn-secondary" onclick="findNext()">Próximo (F3)</button>
-            </div>
+            
             <div class="button-group">
                 <button class="btn btn-success" onclick="replaceText()">Substituir</button>
                 <button class="btn btn-warning" onclick="replaceAllText()">Substituir Tudo</button>
@@ -1017,21 +1018,6 @@
                 searchResultsInfo.textContent = '';
             } else {
                 alert('Nenhuma ocorrência encontrada para substituir.');
-            }
-        }
-        
-        // Funções para os botões de controle da janela
-        function minimizeEditor() {
-            alert('Editor minimizado (simulação)');
-        }
-        
-        function toggleMaximize() {
-            document.body.classList.toggle('maximized');
-        }
-        
-        function closeEditor() {
-            if (confirm('Deseja sair do editor?')) {
-                alert('Editor fechado (simulação)');
             }
         }
         

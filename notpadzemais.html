@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title>Editor com Modo Replicador</title>
     <style>
         * {
             margin: 0;
@@ -64,6 +64,23 @@
             background-color: #0062a3;
         }
         
+        .replicator-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        
+        .replicator-button:hover {
+            background-color: #218838;
+        }
+        
         .container {
             display: flex;
             flex: 1;
@@ -108,8 +125,8 @@
             font-size: 14px;
             line-height: 1.5;
             resize: none;
-            background-color: transparent;
-            color: transparent;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
             caret-color: #e0e0e0;
             position: absolute;
             top: 0;
@@ -120,24 +137,6 @@
             tab-size: 4;
             white-space: pre;
             overflow: auto;
-        }
-        
-        .syntax-highlight {
-            position: absolute;
-            top: 0;
-            left: 40px;
-            width: calc(100% - 40px);
-            height: 100%;
-            padding: 10px;
-            font-family: 'Consolas', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            pointer-events: none;
-            white-space: pre;
-            overflow: hidden;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-            z-index: 5;
         }
         
         .status-bar {
@@ -321,21 +320,10 @@
             background-color: #45a049;
         }
         
-        .syntax-html { color: #e06c75; }
-        .syntax-php { color: #61afef; }
-        .syntax-comment { color: #5c6370; font-style: italic; }
-        .syntax-keyword { color: #c678dd; }
-        .syntax-string { color: #98c379; }
-        .syntax-variable { color: #e06c75; }
-        .syntax-function { color: #61afef; }
-        .syntax-tag { color: #e06c75; }
-        .syntax-attribute { color: #d19a66; }
-        .syntax-number { color: #d19a66; }
-        
         .selection-highlight {
             background-color: rgba(255, 255, 0, 0.3);
             position: absolute;
-            z-index: 2;
+            z-index: 5;
             pointer-events: none;
         }
         
@@ -361,6 +349,73 @@
             z-index: 20;
         }
         
+        /* Estilo para o modo replicador */
+        .replicator-mode {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            background-color: #1e1e1e;
+        }
+        
+        .replicator-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 10px;
+            gap: 10px;
+        }
+        
+        .replicator-input-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .replicator-output-container {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .replicator-label {
+            color: #ccc;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .replicator-input {
+            flex: 1;
+            padding: 10px;
+            background-color: #2b2b2b;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 5px;
+            resize: none;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .replicator-output {
+            flex: 1;
+            padding: 10px;
+            background-color: #2b2b2b;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 5px;
+            overflow: auto;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        
+        .replicator-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            padding: 10px 0;
+        }
+        
         /* Estilo para mobile */
         @media (max-width: 767px) {
             .menu-bar {
@@ -368,7 +423,7 @@
                 align-items: stretch;
             }
             
-            .search-button {
+            .search-button, .replicator-button {
                 margin-top: 5px;
                 justify-content: center;
             }
@@ -404,6 +459,10 @@
             .button-group {
                 flex-direction: column;
             }
+            
+            .replicator-controls {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -415,18 +474,44 @@
     
     <div class="menu-bar">
         <div class="menu-item" onclick="toggleSearch()">Buscar</div>
-        <button class="search-button" onclick="toggleSearch()">
-            <span>🔍</span> Buscar (Ctrl+F)
-        </button>
+        <div>
+            <button class="search-button" onclick="toggleSearch()">
+                <span>🔍</span> Buscar (Ctrl+F)
+            </button>
+            <button class="replicator-button" id="toggleReplicatorBtn" onclick="toggleReplicatorMode()">
+                <span>🔁</span> Modo Replicador
+            </button>
+        </div>
     </div>
     
-    <div class="container">
+    <!-- Modo Editor Normal -->
+    <div class="container" id="normalMode">
         <div class="editor-container">
             <div class="editor-wrapper">
                 <div class="line-numbers" id="line-numbers">1</div>
-                <div class="syntax-highlight" id="syntax-highlight"></div>
                 <textarea id="editor" spellcheck="false" oninput="updateEditor()" onscroll="syncScroll()" onclick="updateStatusBar()" onkeyup="updateStatusBar()" onselect="highlightSelection()"></textarea>
-                <div class="info-text">Ctrl+F para buscar | Texto transparente para ver o realce</div>
+                <div class="info-text">Ctrl+F para buscar</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modo Replicador -->
+    <div class="replicator-mode" id="replicatorMode">
+        <div class="replicator-container">
+            <div class="replicator-input-container">
+                <div class="replicator-label">Digite o texto a ser replicado:</div>
+                <textarea class="replicator-input" id="replicatorInput" placeholder="Digite qualquer texto com quebras de linha..." autofocus oninput="updateReplicatorOutput()"></textarea>
+            </div>
+            
+            <div class="replicator-output-container">
+                <div class="replicator-label">Texto replicado (20 vezes):</div>
+                <div class="replicator-output" id="replicatorOutput"></div>
+            </div>
+            
+            <div class="replicator-controls">
+                <button class="btn btn-success" onclick="copyReplicatedText()">Copiar Texto Replicado</button>
+                <button class="btn btn-danger" onclick="clearReplicator()">Limpar Tudo</button>
+                <button class="btn btn-secondary" onclick="toggleReplicatorMode()">Voltar ao Editor</button>
             </div>
         </div>
     </div>
@@ -475,7 +560,6 @@
 
     <script>
         const editor = document.getElementById('editor');
-        const syntaxHighlight = document.getElementById('syntax-highlight');
         const lineNumbers = document.getElementById('line-numbers');
         const searchModal = document.getElementById('searchModal');
         const searchInput = document.getElementById('searchInput');
@@ -485,20 +569,24 @@
         const searchResultsInfo = document.getElementById('searchResultsInfo');
         const f3Button = document.getElementById('f3Button');
         const ignoreWhitespace = document.getElementById('ignoreWhitespace');
+        const normalMode = document.getElementById('normalMode');
+        const replicatorMode = document.getElementById('replicatorMode');
+        const toggleReplicatorBtn = document.getElementById('toggleReplicatorBtn');
+        const replicatorInput = document.getElementById('replicatorInput');
+        const replicatorOutput = document.getElementById('replicatorOutput');
         
         let allMatches = [];
         let currentMatchIndex = -1;
         let lastSearchText = '';
+        let isReplicatorMode = false;
         
-        // Inicializar números de linha e realce de sintaxe
+        // Inicializar números de linha
         updateLineNumbers();
-        highlightSyntax();
         updateStatusBar();
         
         // Atualizar editor quando o conteúdo mudar
         function updateEditor() {
             updateLineNumbers();
-            highlightSyntax();
             updateStatusBar();
             highlightSelection();
             
@@ -508,10 +596,8 @@
             }
         }
         
-        // Sincronizar scroll entre editor e realce de sintaxe
+        // Sincronizar scroll entre editor e números de linha
         function syncScroll() {
-            syntaxHighlight.scrollTop = editor.scrollTop;
-            syntaxHighlight.scrollLeft = editor.scrollLeft;
             lineNumbers.scrollTop = editor.scrollTop;
         }
         
@@ -549,58 +635,7 @@
             lineNumbers.innerHTML = numbers;
         }
         
-        function highlightSyntax() {
-            let code = editor.value;
-            
-            // Realce para PHP
-            if (code.includes('<?php') || code.includes('<?=')) {
-                code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                
-                // Palavras-chave do PHP
-                const phpKeywords = ['function', 'if', 'else', 'foreach', 'return', 'global', 'session_start', 'strtotime', 'time', 'isset', 'unset', 'preg_match', 'checkdate', 'exec', 'file_exists'];
-                phpKeywords.forEach(keyword => {
-                    const regex = new RegExp(`\\b${keyword}\\b`, 'g');
-                    code = code.replace(regex, `<span class="syntax-keyword">${keyword}</span>`);
-                });
-                
-                // Comentários
-                code = code.replace(/\/\*[\s\S]*?\*\//g, '<span class="syntax-comment">$&</span>');
-                code = code.replace(/\/\/.*$/gm, '<span class="syntax-comment">$&</span>');
-                code = code.replace(/#.*$/gm, '<span class="syntax-comment">$&</span>');
-                
-                // Strings
-                code = code.replace(/'[^']*'|"[^"]*"/g, '<span class="syntax-string">$&</span>');
-                
-                // Variáveis
-                code = code.replace(/\$[a-zA-Z_][a-zA-Z0-9_]*/g, '<span class="syntax-variable">$&</span>');
-                
-                // Números
-                code = code.replace(/\b\d+\b/g, '<span class="syntax-number">$&</span>');
-                
-                // Tags PHP
-                code = code.replace(/&lt;\?php|\?&gt;/g, '<span class="syntax-php">$&</span>');
-                
-                syntaxHighlight.innerHTML = code;
-            } 
-            // Realce para HTML
-            else if (code.includes('</') || code.includes('/>') || code.includes('<html')) {
-                code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                
-                // Tags HTML
-                code = code.replace(/&lt;\/?[a-zA-Z0-9]+(\s+[a-zA-Z0-9]+=\"[^"]*\")*&gt;/g, '<span class="syntax-tag">$&</span>');
-                
-                // Atributos
-                code = code.replace(/[a-zA-Z-]+=/g, '<span class="syntax-attribute">$&</span>');
-                
-                syntaxHighlight.innerHTML = code;
-            } 
-            // Texto simples
-            else {
-                syntaxHighlight.innerHTML = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            }
-        }
-        
-        // Destacar a seleção atual
+        // Destacar a seleção atual - VERSÃO SIMPLIFICADA
         function highlightSelection() {
             // Limpar destaques anteriores
             const oldHighlights = document.querySelectorAll('.selection-highlight');
@@ -610,23 +645,64 @@
             const end = editor.selectionEnd;
             
             if (start !== end) {
-                // Calcular a posição da seleção
-                const textBefore = editor.value.substring(0, start);
-                const linesBefore = textBefore.split('\n');
-                const line = linesBefore.length;
-                const col = linesBefore[linesBefore.length - 1].length;
+                const text = editor.value;
+                const textBeforeSelection = text.substring(0, start);
+                const selectedText = text.substring(start, end);
                 
-                // Criar elemento para destacar a seleção
-                const highlight = document.createElement('div');
-                highlight.className = 'selection-highlight';
+                // Calcular a linha e coluna inicial
+                const linesBefore = textBeforeSelection.split('\n');
+                const startLine = linesBefore.length;
+                const startCol = linesBefore[linesBefore.length - 1].length;
                 
-                // Posicionar o destaque (simplificado)
-                highlight.style.top = (line * 21) + 'px';
-                highlight.style.left = (col * 8.5 + 40) + 'px';
-                highlight.style.width = ((end - start) * 8.5) + 'px';
-                highlight.style.height = '21px';
+                // Calcular a linha e coluna final
+                const textUntilEnd = text.substring(0, end);
+                const linesUntilEnd = textUntilEnd.split('\n');
+                const endLine = linesUntilEnd.length;
+                const endCol = linesUntilEnd[linesUntilEnd.length - 1].length;
                 
-                document.querySelector('.editor-wrapper').appendChild(highlight);
+                // Se a seleção abrange múltiplas linhas
+                if (startLine !== endLine) {
+                    // Criar um destaque para cada linha
+                    for (let line = startLine; line <= endLine; line++) {
+                        const highlight = document.createElement('div');
+                        highlight.className = 'selection-highlight';
+                        
+                        // Calcular a posição Y (top) baseada na linha
+                        highlight.style.top = ((line - 1) * 21) + 'px';
+                        highlight.style.height = '21px';
+                        
+                        // Primeira linha
+                        if (line === startLine) {
+                            highlight.style.left = (startCol * 8.5 + 40) + 'px';
+                            highlight.style.width = 'calc(100% - ' + (startCol * 8.5 + 40) + 'px)';
+                        } 
+                        // Última linha
+                        else if (line === endLine) {
+                            highlight.style.left = '40px';
+                            highlight.style.width = (endCol * 8.5) + 'px';
+                        } 
+                        // Linhas do meio
+                        else {
+                            highlight.style.left = '40px';
+                            highlight.style.width = 'calc(100% - 40px)';
+                        }
+                        
+                        document.querySelector('.editor-wrapper').appendChild(highlight);
+                    }
+                } 
+                // Seleção em uma única linha
+                else {
+                    const highlight = document.createElement('div');
+                    highlight.className = 'selection-highlight';
+                    
+                    // Posicionar o destaque
+                    highlight.style.top = ((startLine - 1) * 21) + 'px';
+                    highlight.style.left = (startCol * 8.5 + 40) + 'px';
+                    highlight.style.width = ((end - start) * 8.5) + 'px';
+                    highlight.style.height = '21px';
+                    
+                    document.querySelector('.editor-wrapper').appendChild(highlight);
+                }
             }
         }
         
@@ -948,7 +1024,6 @@
             
             if (selectionMatches) {
                 editor.setRangeText(replaceText);
-                highlightSyntax();
                 updateLineNumbers();
                 
                 // Atualizar a busca após a substituição
@@ -1003,12 +1078,11 @@
             } else {
                 // Substituição normal
                 newText = text.split(searchText).join(replaceText);
-                count = (text.match(new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+                count = (text.match(new RegExp(searchText.replace(/[.*+?^${}()|[]\\]/g, '\\$&'), 'g')) || []).length;
             }
             
             if (newText !== text) {
                 editor.value = newText;
-                highlightSyntax();
                 updateLineNumbers();
                 alert(`${count} ocorrência(s) substituída(s).`);
                 
@@ -1019,6 +1093,66 @@
             } else {
                 alert('Nenhuma ocorrência encontrada para substituir.');
             }
+        }
+        
+        // Funções para o modo replicador
+        function toggleReplicatorMode() {
+            isReplicatorMode = !isReplicatorMode;
+            
+            if (isReplicatorMode) {
+                normalMode.style.display = 'none';
+                replicatorMode.style.display = 'flex';
+                toggleReplicatorBtn.innerHTML = '<span>📝</span> Modo Editor';
+                updateReplicatorOutput();
+                replicatorInput.focus();
+            } else {
+                normalMode.style.display = 'flex';
+                replicatorMode.style.display = 'none';
+                toggleReplicatorBtn.innerHTML = '<span>🔁</span> Modo Replicador';
+                editor.focus();
+            }
+        }
+        
+        function updateReplicatorOutput() {
+            const text = replicatorInput.value;
+            if (text.trim() === '') {
+                replicatorOutput.textContent = '';
+                return;
+            }
+            
+            let replicatedText = '';
+            for (let i = 0; i < 20; i++) {
+                replicatedText += text;
+                // Adicionar quebra de linha apenas se não for a última linha
+                if (i < 19) {
+                    replicatedText += '\n';
+                }
+            }
+            
+            replicatorOutput.textContent = replicatedText;
+        }
+        
+        function copyReplicatedText() {
+            const textToCopy = replicatorOutput.textContent;
+            if (!textToCopy) {
+                alert('Nada para copiar!');
+                return;
+            }
+            
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    alert('Texto copiado para a área de transferência!');
+                })
+                .catch(err => {
+                    alert('Falha ao copiar texto.');
+                    console.error('Erro ao copiar texto: ', err);
+                });
+        }
+        
+        function clearReplicator() {
+            replicatorInput.value = '';
+            replicatorOutput.textContent = '';
+            replicatorInput.focus();
         }
         
         // Inicializar a barra de status

@@ -2169,6 +2169,18 @@ const ed = {
     });
 
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Zoom com a rodinha do mouse (sobre o canvas)
+    // deltaY < 0 => roda pra cima  => zoom in
+    // deltaY > 0 => roda pra baixo => zoom out
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        this.zoomIn();
+      } else if (e.deltaY > 0) {
+        this.zoomOut();
+      }
+    }, { passive: false });
   },
 
   lineTo(x0, y0, x1, y1, fn) {

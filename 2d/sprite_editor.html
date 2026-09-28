@@ -399,6 +399,14 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
         <div class="flex items-center gap-1 mb-1.5">
           <div class="text-[9px] text-slate-500 uppercase font-bold mr-1">Frames</div>
           <button onclick="ed.addFrame()" class="w-6 h-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-bold flex items-center justify-center" title="New frame">+</button>
+          <div class="w-px h-5 bg-[#3a3350] mx-0.5"></div>
+          <button onclick="ed.copyFrame()" id="copyFrameBtn" class="w-6 h-6 bg-sky-600 hover:bg-sky-500 text-white rounded-md text-xs font-bold flex items-center justify-center" title="Copy current frame to clipboard">
+            <i class="fa-solid fa-copy"></i>
+          </button>
+          <button onclick="ed.pasteFrame()" id="pasteFrameBtn" class="w-6 h-6 bg-amber-600 hover:bg-amber-500 text-white rounded-md text-xs font-bold flex items-center justify-center" title="Paste clipboard into current frame">
+            <i class="fa-solid fa-paste"></i>
+          </button>
+          <span id="frameClipboardInfo" class="text-[9px] text-slate-500 ml-1 font-mono"></span>
         </div>
         <div id="framesList" class="flex gap-2 flex-wrap"></div>
       </div>
@@ -858,6 +866,7 @@ const ed = {
   floatStartMouseX: 0,
   floatStartMouseY: 0,
   clipboardBuffer: null,
+  frameClipboard: null,   // { _grid, _opacity, _from } — frame inteiro copiado
 
   // Play
   isPlaying: false,
@@ -900,6 +909,7 @@ const ed = {
     this.updateZoom();
     this.updateOpacitySlider();
     this.updateInfo();
+    this._updateClipboardInfo();
 
     document.getElementById('colorPicker').oninput = (e) => {
       this.setColor(e.target.value);
@@ -1194,6 +1204,60 @@ const ed = {
     this.draw();
     this.updateInfo();
     this.flash('✓ Frame deleted');
+  },
+
+  // =====================================================================
+  // FRAME CLIPBOARD (copy/paste frames between directions & animations)
+  // =====================================================================
+  copyFrame() {
+    if (this.isPlaying) return;
+    const frame = this.currentFrame;
+    // Cópia profunda da grade (evita referência compartilhada)
+    this.frameClipboard = {
+      _grid: frame._grid.map(row => row.slice()),
+      _opacity: frame._opacity ?? 1,
+      // Guarda origem só pra mostrar no aviso
+      _from: `${this.direction}/${this.anim}/frame ${this.frameIdx + 1}`,
+    };
+    this._updateClipboardInfo();
+    this.flash('📋 Copied ' + this.frameClipboard._from);
+  },
+
+  pasteFrame() {
+    if (this.isPlaying) return;
+    if (!this.frameClipboard) {
+      this.flash('⚠️ Clipboard empty — copy a frame first');
+      return;
+    }
+    const frame = this.currentFrame;
+    // Cópia profunda de novo (pra poder colar várias vezes sem compartilhar)
+    frame._grid = this.frameClipboard._grid.map(row => row.slice());
+    frame._opacity = this.frameClipboard._opacity ?? 1;
+    // Frame colado é tornado visível (senão o usuário não veria a colagem)
+    frame._visible = true;
+
+    // Cancela qualquer seleção ativa (ela ficou inválida com a nova grade)
+    if (this.selection || this.isSelecting || this.isFloatingMove) {
+      this.clearSelection();
+    }
+
+    this.buildFramesList();
+    this.updateOpacitySlider();
+    this.draw();
+    this.updateInfo();
+    this.flash('📋 Pasted into ' + `${this.direction}/${this.anim}/frame ${this.frameIdx + 1}`);
+  },
+
+  _updateClipboardInfo() {
+    const el = document.getElementById('frameClipboardInfo');
+    if (!el) return;
+    if (this.frameClipboard) {
+      el.textContent = '📋 ' + this.frameClipboard._from;
+      el.title = 'Click 📋 Copy to replace, 🎨 Paste to apply here';
+    } else {
+      el.textContent = '';
+      el.title = '';
+    }
   },
 
   // =====================================================================

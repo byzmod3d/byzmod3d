@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BravosGamebr — Character Studio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+  .checkerboard {
+    background-image: linear-gradient(45deg, #2e2a3d 25%, transparent 25%),
+                      linear-gradient(-45deg, #2e2a3d 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, #2e2a3d 75%),
+                      linear-gradient(-45deg, transparent 75%, #2e2a3d 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  }
+  .scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: #4c4463; border-radius: 3px; }
+  .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+  .direction-tab, .anim-tab {
+    padding: 6px 8px;
+    background: #3a3350;
+    border: 1px solid #4c4463;
+    color: #c4b5fd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    transition: 0.15s;
+    text-align: center;
+  }
+  .direction-tab:hover, .anim-tab:hover { background: #4c4463; }
+  .direction-tab.active { background: #8b5cf6; border-color: #a78bfa; color: #fff; }
+  .anim-tab.active { background: #d946ef; border-color: #f0abfc; color: #fff; }
+
+  .tool-btn {
+    padding: 6px 4px;
+    background: #3a3350;
+    border: 2px solid transparent;
+    color: #c4b5fd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 700;
+    transition: 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    justify-content: center;
+    min-height: 48px;
+  }
+  .tool-btn i { font-size: 14px; }
+  .tool-btn:hover { background: #4c4463; }
+  .tool-btn.active {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    border-color: #a78bfa;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(167,139,250,0.5);
+  }
+
+  .effect-btn {
+    padding: 6px 4px;
+    background: #3a3350;
+    border: 1px solid transparent;
+    color: #94a3b8;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    transition: 0.15s;
+    display: flex; align-items: center; gap: 4px;
+    justify-content: center;
+  }
+  .effect-btn:hover { background: #4c4463; }
+  .effect-btn.active {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: #a78bfa;
+    color: #c4b5fd;
+  }
+
+  .action-btn {
+    padding: 7px 10px;
+    background: #3a3350;
+    border: 1px solid #4c4463;
+    color: #c4b5fd;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    transition: 0.15s;
+    display: flex; align-items: center; gap: 5px;
+    justify-content: center;
+    width: 100%;
+  }
+  .action-btn:hover { background: #4c4463; border-color: #a78bfa; }
+  .action-btn.green { background: linear-gradient(135deg, #10b981, #059669); border: none; color: #fff; }
+  .action-btn.green:hover { filter: brightness(1.15); }
+  .action-btn.cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); border: none; color: #fff; }
+  .action-btn.cyan:hover { filter: brightness(1.15); }
+  .action-btn.amber { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: #fff; }
+  .action-btn.amber:hover { filter: brightness(1.15); }
+  .action-btn.violet { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; color: #fff; }
+  .action-btn.violet:hover { filter: brightness(1.15); }
+  .action-btn.rose { background: linear-gradient(135deg, #dc2626, #b91c1c); border: none; color: #fff; }
+  .action-btn.rose:hover { filter: brightness(1.15); }
+
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+  }
+  .palette-swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: 0.1s;
+  }
+  .palette-swatch:hover { transform: scale(1.1); border-color: #a78bfa; }
+  .palette-swatch.active {
+    border-color: #fff;
+    box-shadow: 0 0 0 2px #8b5cf6, 0 0 12px rgba(139,92,246,0.8);
+    transform: scale(1.1);
+  }
+
+  .frame-wrapper {
+    position: relative;
+    width: 44px; height: 44px;
+    flex-shrink: 0;
+  }
+  .frame-thumb {
+    width: 44px; height: 44px;
+    border: 2px solid #3a3350;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #120e1c;
+    image-rendering: pixelated;
+    transition: 0.15s;
+    display: block;
+  }
+  .frame-thumb:hover { border-color: #a78bfa; }
+  .frame-thumb.active {
+    border-color: #a78bfa;
+    box-shadow: 0 0 8px rgba(167,139,250,0.6);
+  }
+  .frame-thumb.hidden-frame { opacity: 0.35; }
+
+  /* Moldura vermelha piscando — frame selecionado MAS oculto (você não está vendo o que pinta) */
+  @keyframes frame-warn-blink {
+    0%, 100% { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,0.35), 0 0 12px rgba(220,38,38,0.7); }
+    50%      { border-color: #7f1d1d; box-shadow: 0 0 0 2px rgba(220,38,38,0.10), 0 0 6px rgba(220,38,38,0.25); }
+  }
+  .frame-thumb.frame-warn {
+    animation: frame-warn-blink 0.9s ease-in-out infinite;
+    opacity: 0.55;
+  }
+
+  /* Moldura verde — frame selecionado E visível (estado seguro pra pintar) */
+  .frame-thumb.frame-safe {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16,185,129,0.35), 0 0 12px rgba(16,185,129,0.7);
+    opacity: 1;
+  }
+  .frame-eye {
+    position: absolute;
+    top: -9px; right: -4px;
+    width: 18px; height: 18px;
+    background: #231d33;
+    border: 1px solid #4c4463;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    z-index: 6;
+    transition: 0.15s;
+    color: #c4b5fd;
+  }
+  .frame-eye {
+    border-radius: 0 5px 5px 0;
+  }
+  .frame-eye:hover {
+    background: #3a3350;
+    border-color: #a78bfa;
+    transform: scale(1.1);
+  }
+  .frame-eye.off {
+    background: #4c1d1d;
+    border-color: #dc2626;
+    color: #fca5a5;
+  }
+  .frame-delete {
+    position: absolute;
+    top: -9px; right: 16px;
+    width: 18px; height: 18px;
+    background: #231d33;
+    border: 1px solid #4c4463;
+    border-right: none;
+    border-radius: 5px 0 0 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    z-index: 6;
+    transition: 0.15s;
+    color: #c4b5fd;
+  }
+  .frame-delete:hover {
+    background: #7f1d1d;
+    border-color: #dc2626;
+    color: #fff;
+    transform: scale(1.1);
+  }
+  .frame-opacity-badge {
+    position: absolute;
+    bottom: -4px; left: -4px;
+    background: #231d33;
+    border: 1px solid #4c4463;
+    border-radius: 4px;
+    font-size: 8px;
+    font-weight: 700;
+    color: #c4b5fd;
+    padding: 1px 3px;
+    font-family: monospace;
+    z-index: 5;
+  }
+  .frame-opacity-badge.low {
+    background: #5b21b6;
+    color: #fff;
+    border-color: #a78bfa;
+  }
+
+  .play-btn {
+    padding: 8px 14px;
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    transition: 0.15s;
+    display: flex; align-items: center; gap: 6px;
+    justify-content: center;
+  }
+  .play-btn:hover { filter: brightness(1.15); }
+  .play-btn.playing { background: #ef4444; }
+
+  #mainCanvas { cursor: crosshair; }
+  #mainCanvas.playing-mode { cursor: default; }
+
+  .opacity-slider, input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: #1a1625;
+    border-radius: 3px;
+    outline: none;
+    border: 1px solid #3a3350;
+    accent-color: #a78bfa;
+  }
+  .opacity-slider::-webkit-slider-thumb, input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px; height: 14px;
+    background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 6px rgba(167,139,250,0.8);
+  }
+
+  body.playing .hide-on-play { opacity: 0.3; pointer-events: none; }
+  body.playing .canvas-wrapper {
+    box-shadow: 0 0 0 3px #10b981, 0 10px 30px rgba(16, 185, 129, 0.4);
+  }
+
+  .active-color-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #2a2438;
+    border: 1px solid #3a3350;
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .active-color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px solid rgba(255,255,255,0.2);
+    flex-shrink: 0;
+  }
+
+  /* Tile preview panel */
+  #tilePreviewPanel {
+    position: absolute;
+    top: 55px;
+    right: 16px;
+    background: rgba(35, 29, 51, 0.97);
+    border: 1px solid #a78bfa;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(167, 139, 250, 0.35);
+    z-index: 150;
+    display: none;
+  }
+  #tilePreviewPanel.active { display: block; }
+  #tilePreviewPanel .tile-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #c4b5fd;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  #tilePreviewCanvas {
+    display: block;
+    image-rendering: pixelated;
+    border-radius: 4px;
+    background: #1a1625;
+  }
+</style>
+</head>
+<body class="h-full bg-[#1a1625] text-slate-100 flex flex-col overflow-hidden">
+
+<header class="bg-[#231d33] border-b border-[#3a3350] px-4 py-2 flex items-center justify-between shrink-0 shadow-md">
+  <div class="flex items-center space-x-3">
+    <div class="bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white p-1.5 rounded-lg shadow-inner flex items-center justify-center w-9 h-9">
+      <i class="fa-solid fa-user-astronaut"></i>
+    </div>
+    <div>
+      <h1 class="font-bold text-sm text-slate-100 tracking-wide">BravosGamebr — Character Studio</h1>
+      <p class="text-[10px] text-slate-400">Front • Side • Back • Animation • Onion Skin</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <button onclick="ed.zoomOut()" class="px-2 py-1 bg-[#3a3350] hover:bg-[#4c4463] rounded-md text-xs"><i class="fa-solid fa-minus"></i></button>
+    <span class="text-xs text-slate-300 min-w-[55px] text-center"><strong id="zoomVal">800%</strong></span>
+    <button onclick="ed.zoomIn()" class="px-2 py-1 bg-[#3a3350] hover:bg-[#4c4463] rounded-md text-xs"><i class="fa-solid fa-plus"></i></button>
+
+    <div class="w-px h-6 bg-[#3a3350] mx-1"></div>
+
+    <button onclick="document.getElementById('importInput').click()" class="action-btn cyan" style="width:auto;">
+      <i class="fa-solid fa-upload"></i> Import
+    </button>
+    <input type="file" id="importInput" accept=".txt,.js,.json" style="display:none" onchange="ed.importProject(event)">
+
+    <button onclick="ed.exportProject()" class="action-btn violet" style="width:auto;">
+      <i class="fa-solid fa-download"></i> Export
+    </button>
+
+    <button onclick="ed.exportPNG()" class="action-btn green" style="width:auto;">
+      <i class="fa-solid fa-image"></i> PNG
+    </button>
+  </div>
+</header>
+
+<div class="flex-1 flex overflow-hidden">
+
+  <!-- ============ LEFT ============ -->
+  <aside class="w-72 bg-[#231d33]/95 border-r border-[#3a3350] p-3 flex flex-col gap-3 overflow-y-auto scroll-thin shrink-0 hide-on-play">
+
+    <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        <i class="fa-solid fa-compass text-violet-400"></i> Direction
+      </div>
+      <div class="grid grid-cols-3 gap-1">
+        <button class="direction-tab active" data-dir="front" onclick="ed.setDirection('front', this)">👤 Front</button>
+        <button class="direction-tab" data-dir="side" onclick="ed.setDirection('side', this)">🚶 Side</button>
+        <button class="direction-tab" data-dir="back" onclick="ed.setDirection('back', this)">🔄 Back</button>
+      </div>
+    </div>
+
+    <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        <i class="fa-solid fa-film text-violet-400"></i> Animation
+      </div>
+      <div class="grid grid-cols-3 gap-1 mb-2" id="animTabs">
+        <button class="anim-tab active" data-anim="idle" onclick="ed.setAnim('idle', this)">Idle</button>
+        <button class="anim-tab" data-anim="walk" onclick="ed.setAnim('walk', this)">Walk</button>
+        <button class="anim-tab" data-anim="parado" onclick="ed.setAnim('parado', this)">Still</button>
+      </div>
+
+      <div class="mb-2">
+        <div class="flex items-center gap-1 mb-1.5">
+          <div class="text-[9px] text-slate-500 uppercase font-bold mr-1">Frames</div>
+          <button onclick="ed.addFrame()" class="w-6 h-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-bold flex items-center justify-center" title="New frame">+</button>
+        </div>
+        <div id="framesList" class="flex gap-2 flex-wrap"></div>
+      </div>
+
+      <div class="bg-[#2a2438] border border-[#3a3350] rounded-lg p-2 mb-2">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="text-[9px] text-slate-400 uppercase font-bold flex items-center gap-1">
+            <i class="fa-solid fa-layer-group text-violet-400"></i> Frame Opacity
+          </div>
+          <span class="text-[10px] font-mono font-bold text-violet-300" id="opacityVal">100%</span>
+        </div>
+        <input type="range" min="0" max="100" value="100" id="opacitySlider" oninput="ed.setFrameOpacity(this.value)">
+        <p class="text-[9px] text-slate-500 mt-1.5 text-center">💡 Lower to see previous frames underneath</p>
+      </div>
+    </div>
+
+    <!-- MIRROR LINES -->
+    <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        <i class="fa-solid fa-arrows-left-right text-violet-400"></i> Mirror Lines
+      </div>
+      <div class="grid grid-cols-2 gap-1">
+        <button id="toggleMirrorH" class="effect-btn" onclick="ed.toggleMirrorH()">
+          <i class="fa-solid fa-arrows-left-right"></i> H
+        </button>
+        <button id="toggleMirrorV" class="effect-btn" onclick="ed.toggleMirrorV()">
+          <i class="fa-solid fa-arrows-up-down"></i> V
+        </button>
+      </div>
+    </div>
+
+    <!-- BRUSH EFFECTS -->
+    <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        <i class="fa-solid fa-wand-sparkles text-violet-400"></i> Brush Effects
+      </div>
+      <div class="grid grid-cols-2 gap-1">
+        <button class="effect-btn active" data-effect="normal" onclick="ed.setBrushEffect('normal', this)">
+          <i class="fa-solid fa-pen"></i> Normal
+        </button>
+        <button class="effect-btn" data-effect="spray" onclick="ed.setBrushEffect('spray', this)">
+          <i class="fa-solid fa-spray-can"></i> Spray
+        </button>
+        <button class="effect-btn" data-effect="glow" onclick="ed.setBrushEffect('glow', this)">
+          <i class="fa-solid fa-sun"></i> Glow
+        </button>
+        <button class="effect-btn" data-effect="texture" onclick="ed.setBrushEffect('texture', this)">
+          <i class="fa-solid fa-brush"></i> Texture
+        </button>
+      </div>
+    </div>
+
+    <!-- FLIP FRAME -->
+    <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        <i class="fa-solid fa-arrows-rotate text-violet-400"></i> Flip Frame
+      </div>
+      <div class="grid grid-cols-2 gap-1">
+        <button class="effect-btn" onclick="ed.flipFrame('h')" title="Flip Horizontal (left/right)">
+          <i class="fa-solid fa-arrows-left-right"></i> H
+        </button>
+        <button class="effect-btn" onclick="ed.flipFrame('v')" title="Flip Vertical (up/down)">
+          <i class="fa-solid fa-arrows-up-down"></i> V
+        </button>
+        <button class="effect-btn" onclick="ed.flipFrame('cw')" title="Rotate 90° Clockwise">
+          <i class="fa-solid fa-rotate-right"></i> 90° ⟳
+        </button>
+        <button class="effect-btn" onclick="ed.flipFrame('ccw')" title="Rotate 90° Counter-Clockwise">
+          <i class="fa-solid fa-rotate-left"></i> 90° ⟲
+        </button>
+      </div>
+      <p class="text-[9px] text-slate-500 mt-1.5 text-center">Applies to current frame only</p>
+    </div>
+
+    <!-- TEXTURE MODE -->
+    <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+      <button id="toggleTextureMode" class="effect-btn w-full" onclick="ed.toggleTextureMode()">
+        <i class="fa-solid fa-chess-board"></i> Texture Mode (Tileset)
+      </button>
+      <p class="text-[9px] text-slate-500 mt-1.5 leading-tight text-center">Shows 3×3 repetition in side panel</p>
+    </div>
+
+    <div class="mt-auto pt-2">
+      <button onclick="ed.clearFrame()" class="action-btn rose">
+        <i class="fa-solid fa-trash-can"></i> Clear Frame
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ============ CENTER ============ -->
+  <main class="flex-1 bg-[#120e1c] flex flex-col items-center justify-center relative overflow-hidden p-4 gap-3">
+
+    <div class="relative canvas-wrapper rounded-2xl transition-all">
+      <div class="absolute -top-1 left-0 bg-[#231d33]/80 backdrop-blur border border-[#3a3350] rounded-t-lg px-3 py-1 text-[10px] text-slate-400 flex items-center gap-3 z-10">
+        <span id="modeLabel">🎨 <strong class="text-violet-300">EDIT</strong></span>
+        <span class="hide-on-play">Cursor: <strong id="posInfo" class="text-violet-300 font-mono">-,-</strong></span>
+        <span>Frame <strong id="frameInfo" class="text-violet-300">1/2</strong></span>
+      </div>
+      <div class="p-3 pt-7 bg-[#231d33]/50 rounded-2xl shadow-2xl border border-[#3a3350]">
+        <div class="checkerboard rounded-lg p-2 relative">
+          <canvas id="mainCanvas" width="64" height="64" style="width:512px;height:512px;display:block;border-radius:8px;"></canvas>
+          <canvas id="overlayCanvas" width="64" height="64" style="position:absolute;top:8px;left:8px;width:512px;height:512px;display:block;border-radius:8px;pointer-events:none;z-index:100;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-[#231d33]/80 backdrop-blur rounded-2xl p-3 border border-[#3a3350] shadow-lg flex items-center gap-3">
+      <button class="play-btn" id="playBtn" onclick="ed.togglePlay()">
+        <i class="fa-solid fa-play"></i> Play
+      </button>
+      <div class="w-px h-8 bg-[#3a3350]"></div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[10px] text-slate-400 uppercase font-bold">FPS:</span>
+        <input type="range" min="1" max="24" value="8" id="fpsSlider" oninput="ed.setFps(this.value)" class="w-28">
+        <span class="text-[11px] font-mono font-bold text-violet-300 w-5" id="fpsVal">8</span>
+      </div>
+      <div class="w-px h-8 bg-[#3a3350]"></div>
+      <div class="text-[10px] text-slate-500">
+        💡 <strong class="text-violet-300">Play</strong> shows clean animation • <strong class="text-violet-300">Stop</strong> back to edit
+      </div>
+    </div>
+
+    <!-- Tile Preview Panel -->
+    <div id="tilePreviewPanel">
+      <div class="tile-title">
+        <i class="fa-solid fa-chess-board"></i> Tileset Preview 3×3
+      </div>
+      <canvas id="tilePreviewCanvas" width="192" height="192" style="width:192px;height:192px;"></canvas>
+      <p class="text-[9px] text-slate-500 mt-1.5 text-center">Edges should match to repeat</p>
+    </div>
+
+  </main>
+
+  <!-- ============ RIGHT ============ -->
+  <aside class="w-80 bg-[#231d33]/95 border-l border-[#3a3350] p-3 flex flex-col gap-3 overflow-y-auto scroll-thin shrink-0 hide-on-play">
+
+    <!-- TOOLS -->
+    <div>
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+        <i class="fa-solid fa-tools text-violet-400"></i> Tools
+      </div>
+      <div class="grid grid-cols-4 gap-1">
+        <button class="tool-btn active" data-tool="brush" onclick="ed.setTool('brush', this)" title="Brush">
+          <i class="fa-solid fa-paintbrush"></i>
+          <span>Brush</span>
+        </button>
+        <button class="tool-btn" data-tool="eraser" onclick="ed.setTool('eraser', this)" title="Eraser">
+          <i class="fa-solid fa-eraser"></i>
+          <span>Eraser</span>
+        </button>
+        <button class="tool-btn" data-tool="bucket" onclick="ed.setTool('bucket', this)" title="Bucket Fill">
+          <i class="fa-solid fa-fill-drip"></i>
+          <span>Bucket</span>
+        </button>
+        <button class="tool-btn" data-tool="wand" onclick="ed.setTool('wand', this)" title="Magic Wand">
+          <i class="fa-solid fa-wand-magic"></i>
+          <span>Wand</span>
+        </button>
+        <button class="tool-btn" data-tool="picker" onclick="ed.setTool('picker', this)" title="Color Picker">
+          <i class="fa-solid fa-eye-dropper"></i>
+          <span>Picker</span>
+        </button>
+        <button class="tool-btn" data-tool="rect" onclick="ed.setTool('rect', this)" title="Rectangle Select">
+          <i class="fa-solid fa-vector-square"></i>
+          <span>Rect</span>
+        </button>
+        <button class="tool-btn" data-tool="move" onclick="ed.setTool('move', this)" title="Move Selection">
+          <i class="fa-solid fa-up-down-left-right"></i>
+          <span>Move</span>
+        </button>
+        <button class="tool-btn" data-tool="text" onclick="ed.setTool('text', this)" title="Text">
+          <i class="fa-solid fa-font"></i>
+          <span>Text</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TEXT OPTIONS -->
+    <div id="textOptions" class="hidden bg-violet-900/30 border border-violet-500/40 rounded-lg p-2">
+      <label class="text-[9px] text-slate-400 uppercase font-bold">Text (5×7 pixel art)</label>
+      <input type="text" id="textInput" placeholder="Hello" maxlength="20" class="w-full mt-1 bg-[#1a1625] border border-[#4c4463] rounded-lg px-2 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-violet-400">
+      <p class="text-[9px] text-violet-300 text-center mt-1 font-mono">Click on canvas to place</p>
+    </div>
+
+    <!-- SLIDERS -->
+    <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350] space-y-2">
+      <div>
+        <div class="flex justify-between text-[10px] text-slate-300 mb-1">
+          <span>Size</span><strong id="sizeVal" class="text-violet-300">1px</strong>
+        </div>
+        <input type="range" id="sizeSlider" min="1" max="16" value="1" oninput="ed.setSize(this.value)">
+      </div>
+      <div>
+        <div class="flex justify-between text-[10px] text-slate-300 mb-1">
+          <span>Opacity</span><strong id="brushOpacityVal" class="text-violet-300">100%</strong>
+        </div>
+        <input type="range" id="brushOpacitySlider" min="1" max="100" value="100" oninput="ed.setBrushOpacity(this.value)">
+      </div>
+      <div>
+        <div class="flex justify-between text-[10px] text-slate-300 mb-1">
+          <span>Tolerance</span><strong id="tolVal" class="text-violet-300">30</strong>
+        </div>
+        <input type="range" id="tolSlider" min="0" max="255" value="30" oninput="ed.setTolerance(this.value)">
+      </div>
+    </div>
+
+    <!-- CURRENT COLOR -->
+    <div>
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+        <i class="fa-solid fa-eye-dropper text-violet-400"></i> Current Color
+      </div>
+      <div class="active-color-box">
+        <div class="active-color-swatch" id="activeColorSwatch" style="background: #f5c89a;"></div>
+        <div class="flex-1">
+          <div class="text-[9px] text-slate-400 uppercase font-bold">Hex</div>
+          <div class="font-mono font-bold text-white text-xs" id="activeColorHex">#F5C89A</div>
+        </div>
+        <button onclick="ed.addToFavorites()" class="px-2 py-1 bg-amber-500 hover:bg-amber-400 text-white rounded-md text-xs font-bold" title="Add to favorites">
+          <i class="fa-solid fa-star"></i>
+        </button>
+      </div>
+      <div class="mt-1.5">
+        <input type="color" id="colorPicker" value="#f5c89a" class="w-full h-10 rounded-lg cursor-pointer border border-[#3a3350] bg-transparent">
+      </div>
+    </div>
+
+    <!-- PIXEL ART PALETTE -->
+    <div>
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+        <i class="fa-solid fa-palette text-violet-400"></i> Pixel Art Palette
+      </div>
+      <div class="palette-grid bg-[#1a1625]/60 p-1.5 rounded-lg border border-[#3a3350]" id="pixelPalette"></div>
+    </div>
+
+    <!-- FAVORITES -->
+    <div class="flex-1 flex flex-col min-h-0">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-star text-amber-400"></i> Favorites
+        </span>
+        <button onclick="ed.clearFavorites()" class="text-[9px] text-slate-500 hover:text-rose-400" title="Clear all favorites">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+      <div class="palette-grid bg-[#1a1625]/60 p-1.5 rounded-lg border border-[#3a3350] overflow-y-auto scroll-thin" id="favoritesGrid" style="max-height:140px;"></div>
+      <p class="text-[9px] text-slate-500 mt-1 text-center">Click = use • Right-click = remove</p>
+    </div>
+
+  </aside>
+
+</div>
+
+<script>
+// =========================================================================
+// CONSTANTS
+// =========================================================================
+const SIZE = 64;
+
+const COLOR_MAP = {
+  'S': '#f5c89a', 'D': '#e0a878',
+  'H': '#5c3a21', 'h': '#3d2817',
+  'E': '#1a1a2e', 'W': '#ffffff',
+  'A': '#3ae2ee',
+  'T': '#ee3a88', 't': '#5b21b6',
+  'P': '#475569', 'p': '#334155',
+  'B': '#3ae2ee', 'b': '#5b21b6',
+};
+
+const OFFSETS = {
+  head:  { x: 0, y: 0 },
+  eyes:  { x: 0, y: 0 },
+  hair:  { x: 0, y: 0 },
+  torso: { x: 0, y: 8 },
+  arms:  { x: 0, y: 8 },
+  legs:  { x: 1, y: 9 },
+};
+
+const SPRITES_FRONT_CHARS = {
+  head:  ["................","................","....SSSSSSSS....","...SSSSSSSSSS...","...SSSSSSSSSS...","...SSSEESSEESS...","...SEWASSAWES...","...SSWESSEWSS...","...SSSSSSSSSS...","...SSSSSSSSSS...","....SSSSSSSS....",".....SSSSSS.....","................","................","................","................"],
+  eyes:  ["................","................","................","................","................","...SSEESSEESS...","...SEWASSAWES...","...SSWESSEWSS...","................","................","................","................","................","................","................","................"],
+  hair:  [".....HHHHHH.....","....HHHHHHHH....","...HhhhhhhhhH...","..HhHHHHHHHHhH..","..HhH..H...HhH..","..HHH.......HH..","..HH........HH..",".HHH........HHH.",".HHH........HHH.",".HH.........HH..","..HH........HH..","...HH......HH...","................","................","................","................"],
+  torso: ["................","................","................","................","......tttt......","....ttTTTTtt....","....tTTTTTTt....",".....TTTTTT.....",".....TTTTTT.....","....TTTTTTTT....","....TttttttT....","...TTTTTTTTTT...","................","................","................","................"],
+  arms:  ["................","................","................","................","................","...T........T...","..TT........TT..","..SS........SS..","..SS........SS..","..SS........SS..","................","................","................","................","................","................"],
+  legs:  ["................","................","................","................","................","................","................","................","................","................","................","....TT..TT......","....AA..AA......","................","................","................"],
+};
+
+const SPRITES_SIDE_CHARS = {
+  head:  ["................","................","....SSSSSSSS....","...SSSSSSSSSS...","...SSSSSSSSSS...","...SSSSEESSSS...","...SSEWESSSSS...","...SSSWESSSSS...","...SSSSSSSSS....","...SSSSSSSS.....","....SSSSSSS.....",".....SSSSS......","................","................","................","................"],
+  eyes:  ["................","................","................","................","................","......EEW.......","......EEW.......","................","................","................","................","................","................","................","................","................"],
+  hair:  [".....HHHHHH.....","....HHHHHHHH....","...HhhhhhhhhH...","..Hh........hH..","..Hh........hH..","..HH........HHH.","..HH.........HH.","..HH.........HH.","..HH.........HH.","..HH.........HH.","..HH.........HH.","...HH........HH.","................","................","................","................"],
+  torso: ["................","................","................","................","......tttt......",".....tTTTTt.....",".....tTTTTt.....",".....TTTTTT.....",".....TTTTTT.....","....TTTTTTT.....","....TtttttT.....","...TTTTTTTTT....","................","................","................","................"],
+  arms:  ["................","................","................","................","................",".....T..........",".....TT.........",".....SS.........",".....SS.........",".....SS.........","................","................","................","................","................","................"],
+  legs:  ["................","................","................","................","................","................","................","................","................","................","................",".....TT.........",".....AA.........","................","................","................"],
+};
+
+const SPRITES_BACK_CHARS = {
+  head:  ["................","................","....SSSSSSSS....","...SSSSSSSSSS...","...SSSSSSSSSS...","...SSSSSSSSSS...","...SSSSSSSSSS...","...SSSSSSSSSS...","...SSSSSSSSSS...","...SSSSSSSSSS...","....SSSSSSSS....",".....SSSSSS.....","................","................","................","................"],
+  eyes:  ["................","................","................","................","................","................","................","................","................","................","................","................","................","................","................","................"],
+  hair:  [".....HHHHHH.....","....HHHHHHHH....","...HHHHHHHHHH...","..HHHHHHHHHHHH..","..HHHHHHHHHHHH..","..HHHHHHHHHHHH..","..HHHHHHHHHHHH..",".HHHHHHHHHHHHHH.",".HHHHHHHHHHHHHH.",".HHHHHHHHHHHHHH.","..HHHHHHHHHHHH..","...HHHHHHHHHH...","................","................","................","................"],
+  torso: ["................","................","................","................","......tttt......","....ttTTTTtt....","....tTTTTTTt....",".....TTTTTT.....",".....TTTTTT.....","....TTTTTTTT....","....TTTTTTTT....","...TTTTTTTTTT...","................","................","................","................"],
+  arms:  ["................","................","................","................","................","...T........T...","..TT........TT..","..SS........SS..","..SS........SS..","..SS........SS..","................","................","................","................","................","................"],
+  legs:  ["................","................","................","................","................","................","................","................","................","................","................","....TT..TT......","....AA..AA......","................","................","................"],
+};
+
+const SPRITES_CHARS = {
+  front: SPRITES_FRONT_CHARS,
+  side: SPRITES_SIDE_CHARS,
+  back: SPRITES_BACK_CHARS,
+};
+
+// =========================================================================
+// PIXEL FONT 5x7 for TEXT tool
+// =========================================================================
+const PIXEL_FONT = {
+  'A':[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+  'B':[[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0]],
+  'C':[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,1],[0,1,1,1,0]],
+  'D':[[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0]],
+  'E':[[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+  'F':[[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0]],
+  'G':[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,0],[1,0,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  'H':[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+  'I':[[0,1,1,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,1,1,1,0]],
+  'J':[[0,0,1,1,1],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,1,0],[1,0,0,1,0],[0,1,1,0,0]],
+  'K':[[1,0,0,0,1],[1,0,0,1,0],[1,0,1,0,0],[1,1,0,0,0],[1,0,1,0,0],[1,0,0,1,0],[1,0,0,0,1]],
+  'L':[[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+  'M':[[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+  'N':[[1,0,0,0,1],[1,1,0,0,1],[1,0,1,0,1],[1,0,0,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+  'O':[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  'P':[[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0]],
+  'Q':[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,1,0,1],[1,0,0,1,0],[0,1,1,0,1]],
+  'R':[[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,1,0,0],[1,0,0,1,0],[1,0,0,0,1]],
+  'S':[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,0],[0,1,1,1,0],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  'T':[[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+  'U':[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  'V':[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0]],
+  'W':[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,1,0,1],[1,0,1,0,1],[1,1,0,1,1],[1,0,0,0,1]],
+  'X':[[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[1,0,0,0,1],[1,0,0,0,1]],
+  'Y':[[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+  'Z':[[1,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+  '0':[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,1,1],[1,0,1,0,1],[1,1,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  '1':[[0,0,1,0,0],[0,1,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,1,1,1,0]],
+  '2':[[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,1,1,1,1]],
+  '3':[[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,1,1,0],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  '4':[[0,0,0,1,0],[0,0,1,1,0],[0,1,0,1,0],[1,0,0,1,0],[1,1,1,1,1],[0,0,0,1,0],[0,0,0,1,0]],
+  '5':[[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  '6':[[0,0,1,1,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  '7':[[1,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[0,1,0,0,0],[0,1,0,0,0]],
+  '8':[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  '9':[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,1,1,0,0]],
+  ' ':[0,0,0,0,0].map(()=>[0,0,0,0,0]),
+  '.':[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,1,1,0,0],[0,1,1,0,0]],
+  '!':[[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+  '?':[[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,1,0,0]],
+  '-':[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],
+  '_':[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,1,1,1,1]],
+  '+':[[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0]],
+  ':':[[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0]],
+  '/':[[0,0,0,0,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,0,0,0,0],[1,0,0,0,0]],
+  '*':[[0,0,0,0,0],[1,0,1,0,1],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[1,0,1,0,1],[0,0,0,0,0]]
+};
+
+// =========================================================================
+// STRUCTURE
+// =========================================================================
+function emptyGrid64() {
+  return Array.from({ length: 64 }, () => Array(64).fill(null));
+}
+
+function makeCharacterGrid(direction) {
+  const grid = emptyGrid64();
+  const order = ['legs', 'torso', 'arms', 'head', 'eyes', 'hair'];
+  const sprites = SPRITES_CHARS[direction];
+
+  order.forEach(layerId => {
+    const sprite = sprites[layerId];
+    const off = OFFSETS[layerId];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const ch = sprite[y][x];
+        if (ch === '.') continue;
+        const hex = COLOR_MAP[ch];
+        if (!hex) continue;
+        const px = 24 + x + off.x;
+        const py = 24 + y + off.y;
+        if (px < 0 || px >= 64 || py < 0 || py >= 64) continue;
+        grid[py][px] = hex;
+      }
+    }
+  });
+  return grid;
+}
+
+function makeCharacterFrame(direction, isFirst = false) {
+  return {
+    _grid: makeCharacterGrid(direction),
+    _opacity: 1,
+    _visible: isFirst,
+  };
+}
+
+function makeProject() {
+  const dirs = ['front', 'side', 'back'];
+  const anims = ['idle', 'walk', 'parado'];
+  const project = {};
+
+  dirs.forEach(dir => {
+    project[dir] = {};
+    anims.forEach(anim => {
+      const frames = [];
+      const count = anim === 'idle' ? 2 : anim === 'walk' ? 4 : 1;
+      for (let i = 0; i < count; i++) {
+        frames.push(makeCharacterFrame(dir, i === 0));
+      }
+      project[dir][anim] = { frames };
+    });
+  });
+  return project;
+}
+
+// =========================================================================
+// STATE
+// =========================================================================
+const ed = {
+  zoom: 8,
+  project: null,
+  direction: 'front',
+  anim: 'idle',
+  frameIdx: 0,
+
+  activeColor: '#f5c89a',
+  tool: 'brush',
+  brushSize: 1,
+  brushOpacity: 1,
+  tolerance: 30,
+  brushEffect: 'normal',
+
+  mirrorH: false,
+  mirrorV: false,
+  textureMode: false,
+
+  painting: false,
+  paintingErase: false,
+  lastX: null,
+  lastY: null,
+
+  // Selection
+  selection: null,
+  isSelecting: false,
+  selectStart: null,
+  previewPt: null,
+  isFloatingMove: false,
+  floatBuffer: null,
+  floatOffsetX: 0,
+  floatOffsetY: 0,
+  floatStartMouseX: 0,
+  floatStartMouseY: 0,
+  clipboardBuffer: null,
+
+  // Play
+  isPlaying: false,
+  playFrameIdx: 0,
+  playTimer: null,
+  fps: 8,
+
+  favorites: [],
+
+  init() {
+    this.canvas = document.getElementById('mainCanvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.ctx.imageSmoothingEnabled = false;
+
+    this.overlayCanvas = document.getElementById('overlayCanvas');
+    this.overlayCtx = this.overlayCanvas.getContext('2d');
+    this.overlayCtx.imageSmoothingEnabled = false;
+
+    // Tile preview
+    this.tilePreviewCanvas = document.getElementById('tilePreviewCanvas');
+    this.tilePreviewCtx = this.tilePreviewCanvas.getContext('2d');
+    this.tilePreviewPanel = document.getElementById('tilePreviewPanel');
+
+    try {
+      const saved = localStorage.getItem('bravosgamebr_favorites');
+      if (saved) this.favorites = JSON.parse(saved);
+    } catch (e) {}
+
+    this.project = makeProject();
+
+    this.buildPixelPalette();
+    this.buildFavorites();
+    this.updateActiveColorUI();
+
+    this.buildFramesList();
+    this.bindCanvas();
+    this.bindKeyboard();
+    this.setTool('brush', document.querySelector('[data-tool="brush"]'));
+    this.draw();
+    this.updateZoom();
+    this.updateOpacitySlider();
+    this.updateInfo();
+
+    document.getElementById('colorPicker').oninput = (e) => {
+      this.setColor(e.target.value);
+    };
+  },
+
+  get currentFrame() {
+    return this.project[this.direction][this.anim].frames[this.frameIdx];
+  },
+
+  get currentGrid() {
+    return this.currentFrame._grid;
+  },
+
+  updateInfo() {
+    document.getElementById('posInfo').textContent = '-,-';
+    document.getElementById('frameInfo').textContent =
+      `${this.frameIdx + 1}/${this.project[this.direction][this.anim].frames.length}`;
+  },
+
+  // =====================================================================
+  // FRAME OPACITY
+  // =====================================================================
+  setFrameOpacity(value) {
+    const opacity = parseInt(value) / 100;
+    this.currentFrame._opacity = opacity;
+    document.getElementById('opacityVal').textContent = value + '%';
+    this.draw();
+    this.updateFrameBadge(this.frameIdx);
+  },
+
+  updateOpacitySlider() {
+    const opacity = Math.round((this.currentFrame._opacity ?? 1) * 100);
+    document.getElementById('opacitySlider').value = opacity;
+    document.getElementById('opacityVal').textContent = opacity + '%';
+  },
+
+  updateFrameBadge(idx) {
+    const frame = this.project[this.direction][this.anim].frames[idx];
+    const badge = document.querySelector(`.frame-wrapper[data-idx="${idx}"] .frame-opacity-badge`);
+    if (badge) {
+      const val = Math.round((frame._opacity ?? 1) * 100);
+      badge.textContent = val + '%';
+      badge.classList.toggle('low', val < 100);
+    }
+  },
+
+  toggleFrameVisibility(idx) {
+    const frame = this.project[this.direction][this.anim].frames[idx];
+    frame._visible = !frame._visible;
+    this.buildFramesList();   // reconstrói as molduras (verde/vermelha)
+    this.draw();
+    if (idx === this.frameIdx) {
+      this.flash(frame._visible ? '👁️ Frame visible — safe to paint' : '🚫 Frame hidden — painting blind!');
+    }
+  },
+
+  // =====================================================================
+  // DIRECTION / ANIMATION
+  // =====================================================================
+  setDirection(dir, btn) {
+    if (this.isPlaying) return;
+    this.direction = dir;
+    this.frameIdx = 0;
+    document.querySelectorAll('.direction-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    this.buildFramesList();
+    this.updateOpacitySlider();
+    this.draw();
+    this.updateInfo();
+  },
+
+  setAnim(anim, btn) {
+    if (this.isPlaying) return;
+    this.anim = anim;
+    this.frameIdx = 0;
+    document.querySelectorAll('.anim-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    this.buildFramesList();
+    this.updateOpacitySlider();
+    this.draw();
+    this.updateInfo();
+  },
+
+  // =====================================================================
+  // COLOR
+  // =====================================================================
+  setColor(hex) {
+    if (!hex) return;
+    if (!hex.startsWith('#')) hex = '#' + hex;
+    if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+    this.activeColor = hex.toLowerCase();
+    this.updateActiveColorUI();
+  },
+
+  updateActiveColorUI() {
+    document.getElementById('colorPicker').value = this.activeColor;
+    document.getElementById('activeColorHex').textContent = this.activeColor.toUpperCase();
+    document.getElementById('activeColorSwatch').style.background = this.activeColor;
+  },
+
+  buildPixelPalette() {
+    const colors = [
+      '#000000','#ffffff','#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff',
+      '#880000','#008800','#000088','#888800','#880088','#008888','#cccccc','#888888',
+      '#ff8800','#8800ff','#00ff88','#ff0088','#88ff00','#0088ff','#554433','#ccaa88'
+    ];
+    const c = document.getElementById('pixelPalette');
+    c.innerHTML = '';
+    colors.forEach(hex => {
+      const el = document.createElement('div');
+      el.className = 'palette-swatch';
+      el.style.background = hex;
+      el.title = hex;
+      el.onclick = () => this.setColor(hex);
+      c.appendChild(el);
+    });
+  },
+
+  // =====================================================================
+  // FAVORITES
+  // =====================================================================
+  addToFavorites() {
+    const hex = this.activeColor;
+    if (!hex) { alert('Pick a color first.'); return; }
+    if (!this.favorites.includes(hex)) {
+      this.favorites.unshift(hex);
+      if (this.favorites.length > 48) this.favorites.pop();
+      localStorage.setItem('bravosgamebr_favorites', JSON.stringify(this.favorites));
+      this.buildFavorites();
+      this.flash('✓ Added to favorites');
+    } else {
+      this.flash('Already in favorites');
+    }
+  },
+
+  removeFavorite(hex, e) {
+    e.preventDefault();
+    this.favorites = this.favorites.filter(c => c !== hex);
+    localStorage.setItem('bravosgamebr_favorites', JSON.stringify(this.favorites));
+    this.buildFavorites();
+  },
+
+  clearFavorites() {
+    if (!confirm('Clear all favorites?')) return;
+    this.favorites = [];
+    localStorage.setItem('bravosgamebr_favorites', JSON.stringify(this.favorites));
+    this.buildFavorites();
+    this.flash('✓ Favorites cleared');
+  },
+
+  buildFavorites() {
+    const c = document.getElementById('favoritesGrid');
+    c.innerHTML = '';
+    if (this.favorites.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'col-span-6 text-center text-[9px] text-slate-500 py-3';
+      empty.textContent = 'No favorites yet. Click ⭐ to add.';
+      c.appendChild(empty);
+      return;
+    }
+    this.favorites.forEach(hex => {
+      const el = document.createElement('div');
+      el.className = 'palette-swatch';
+      el.style.background = hex;
+      el.title = hex + ' (right-click to remove)';
+      el.onclick = () => this.setColor(hex);
+      el.oncontextmenu = (e) => this.removeFavorite(hex, e);
+      c.appendChild(el);
+    });
+  },
+
+  // =====================================================================
+  // FRAMES
+  // =====================================================================
+  buildFramesList() {
+    const c = document.getElementById('framesList');
+    c.innerHTML = '';
+    const frames = this.project[this.direction][this.anim].frames;
+    frames.forEach((frame, idx) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'frame-wrapper';
+      wrapper.dataset.idx = idx;
+
+      const thumb = document.createElement('canvas');
+      thumb.className = 'frame-thumb';
+      thumb.width = 44; thumb.height = 44;
+      if (idx === this.frameIdx) {
+        thumb.classList.add('active');
+        // Moldura verde se o frame selecionado está visível;
+        // moldura vermelha piscando se está oculto (risco de pintar às cegas).
+        if (frame._visible) {
+          thumb.classList.add('frame-safe');
+        } else {
+          thumb.classList.add('frame-warn');
+        }
+      }
+      if (!frame._visible) thumb.classList.add('hidden-frame');
+      const tctx = thumb.getContext('2d');
+      tctx.imageSmoothingEnabled = false;
+      this.drawFrameTo(tctx, frame, 44);
+      thumb.onclick = () => { if (!this.isPlaying) this.selectFrame(idx); };
+      wrapper.appendChild(thumb);
+
+      const eye = document.createElement('div');
+      eye.className = 'frame-eye' + (frame._visible ? '' : ' off');
+      eye.textContent = frame._visible ? '👁️' : '🚫';
+      eye.title = frame._visible ? 'Hide frame' : 'Show frame';
+      eye.onclick = (e) => {
+        e.stopPropagation();
+        if (this.isPlaying) return;
+        this.toggleFrameVisibility(idx);
+      };
+      wrapper.appendChild(eye);
+
+      const del = document.createElement('div');
+      del.className = 'frame-delete';
+      del.textContent = '✕';
+      del.title = 'Delete frame';
+      del.onclick = (e) => {
+        e.stopPropagation();
+        if (this.isPlaying) return;
+        this.deleteFrame(idx);
+      };
+      wrapper.appendChild(del);
+
+      const badge = document.createElement('div');
+      badge.className = 'frame-opacity-badge';
+      const val = Math.round((frame._opacity ?? 1) * 100);
+      badge.textContent = val + '%';
+      if (val < 100) badge.classList.add('low');
+      wrapper.appendChild(badge);
+
+      c.appendChild(wrapper);
+    });
+    document.getElementById('frameInfo').textContent = `${this.frameIdx + 1}/${frames.length}`;
+  },
+
+  selectFrame(idx) {
+    this.frameIdx = idx;
+    this.buildFramesList();
+    this.updateOpacitySlider();
+    this.draw();
+    this.updateInfo();
+  },
+
+  addFrame() {
+    if (this.isPlaying) return;
+    const frames = this.project[this.direction][this.anim].frames;
+    const current = this.currentFrame;
+    const newFrame = {
+      _grid: current._grid.map(row => row.map(c => c)),
+      _opacity: 1,
+      _visible: false,
+    };
+    frames.push(newFrame);
+    this.frameIdx = frames.length - 1;
+    this.buildFramesList();
+    this.updateOpacitySlider();
+    this.draw();
+    this.updateInfo();
+  },
+
+  deleteFrame(idx) {
+    if (this.isPlaying) return;
+    const frames = this.project[this.direction][this.anim].frames;
+
+    // Não permite deletar o último frame restante
+    if (frames.length <= 1) {
+      this.flash('Cannot delete the last frame');
+      return;
+    }
+
+    if (!confirm(`Delete frame ${idx + 1}?`)) return;
+
+    // Se havia seleção/move flutuante, cancela
+    if (this.selection || this.isSelecting || this.isFloatingMove) {
+      this.clearSelection();
+    }
+
+    frames.splice(idx, 1);
+
+    // Ajusta o índice do frame atual
+    if (this.frameIdx >= frames.length) {
+      this.frameIdx = frames.length - 1;
+    } else if (this.frameIdx > idx) {
+      this.frameIdx -= 1;
+    }
+
+    this.buildFramesList();
+    this.updateOpacitySlider();
+    this.draw();
+    this.updateInfo();
+    this.flash('✓ Frame deleted');
+  },
+
+  // =====================================================================
+  // BRUSH EFFECTS
+  // =====================================================================
+  setBrushEffect(effect, btn) {
+    this.brushEffect = effect;
+    document.querySelectorAll('.effect-btn[data-effect]').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+  },
+
+  setSize(val) {
+    this.brushSize = parseInt(val);
+    document.getElementById('sizeVal').textContent = this.brushSize + 'px';
+  },
+
+  setBrushOpacity(val) {
+    this.brushOpacity = parseInt(val) / 100;
+    document.getElementById('brushOpacityVal').textContent = val + '%';
+  },
+
+  setTolerance(val) {
+    this.tolerance = parseInt(val);
+    document.getElementById('tolVal').textContent = val;
+  },
+
+  // =====================================================================
+  // MIRROR / TEXTURE
+  // =====================================================================
+  toggleMirrorH() {
+    this.mirrorH = !this.mirrorH;
+    const btn = document.getElementById('toggleMirrorH');
+    btn.classList.toggle('active', this.mirrorH);
+    this.drawOverlay();
+  },
+
+  toggleMirrorV() {
+    this.mirrorV = !this.mirrorV;
+    const btn = document.getElementById('toggleMirrorV');
+    btn.classList.toggle('active', this.mirrorV);
+    this.drawOverlay();
+  },
+
+  // =====================================================================
+  // FLIP / ROTATE FRAME
+  // =====================================================================
+  flipFrame(mode) {
+    if (this.isPlaying) return;
+    const grid = this.currentFrame._grid;
+    const N = SIZE;
+
+    // Cria nova grid vazia
+    const out = Array.from({ length: N }, () => Array(N).fill(null));
+
+    if (mode === 'h') {
+      // Espelha horizontal (esquerda <-> direita)
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          out[y][N - 1 - x] = grid[y][x];
+        }
+      }
+    } else if (mode === 'v') {
+      // Espelha vertical (cima <-> baixo)
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          out[N - 1 - y][x] = grid[y][x];
+        }
+      }
+    } else if (mode === 'cw') {
+      // Rotaciona 90° sentido horário
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          out[x][N - 1 - y] = grid[y][x];
+        }
+      }
+    } else if (mode === 'ccw') {
+      // Rotaciona 90° sentido anti-horário
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          out[N - 1 - x][y] = grid[y][x];
+        }
+      }
+    } else {
+      return;
+    }
+
+    this.currentFrame._grid = out;
+
+    // Se havia seleção ativa, ela fica inválida após o flip
+    if (this.selection || this.isSelecting) {
+      this.clearSelection();
+    }
+
+    this.buildFramesList();
+    this.draw();
+    this.renderTilePreview();
+
+    const labels = { h: 'Horizontal', v: 'Vertical', cw: '90° CW', ccw: '90° CCW' };
+    this.flash('✓ Flip ' + labels[mode]);
+  },
+
+  toggleTextureMode() {
+    this.textureMode = !this.textureMode;
+    const btn = document.getElementById('toggleTextureMode');
+    btn.classList.toggle('active', this.textureMode);
+    this.renderTilePreview();
+  },
+
+  renderTilePreview() {
+    if (!this.textureMode) {
+      this.tilePreviewPanel.classList.remove('active');
+      return;
+    }
+    this.tilePreviewPanel.classList.add('active');
+
+    const tSize = 64;
+    this.tilePreviewCtx.clearRect(0, 0, 192, 192);
+
+    // Compõe o frame atual
+    const composite = document.createElement('canvas');
+    composite.width = SIZE; composite.height = SIZE;
+    const cctx = composite.getContext('2d');
+    this.drawFrameTo(cctx, this.currentFrame, SIZE);
+
+    // 3x3 repeat
+    for (let ty = 0; ty < 3; ty++) {
+      for (let tx = 0; tx < 3; tx++) {
+        this.tilePreviewCtx.drawImage(composite, tx * tSize, ty * tSize, tSize, tSize);
+      }
+    }
+
+    // Overlay das bordas
+    this.tilePreviewCtx.save();
+    this.tilePreviewCtx.strokeStyle = 'rgba(167, 139, 250, 0.6)';
+    this.tilePreviewCtx.lineWidth = 0.5;
+    this.tilePreviewCtx.setLineDash([2, 2]);
+    for (let i = 1; i < 3; i++) {
+      this.tilePreviewCtx.beginPath();
+      this.tilePreviewCtx.moveTo(i * tSize, 0);
+      this.tilePreviewCtx.lineTo(i * tSize, tSize * 3);
+      this.tilePreviewCtx.stroke();
+      this.tilePreviewCtx.beginPath();
+      this.tilePreviewCtx.moveTo(0, i * tSize);
+      this.tilePreviewCtx.lineTo(tSize * 3, i * tSize);
+      this.tilePreviewCtx.stroke();
+    }
+    this.tilePreviewCtx.restore();
+
+    // Destaque do centro
+    this.tilePreviewCtx.save();
+    this.tilePreviewCtx.strokeStyle = '#a78bfa';
+    this.tilePreviewCtx.lineWidth = 1;
+    this.tilePreviewCtx.setLineDash([]);
+    this.tilePreviewCtx.strokeRect(tSize + 0.5, tSize + 0.5, tSize - 1, tSize - 1);
+    this.tilePreviewCtx.restore();
+  },
+
+  // =====================================================================
+  // TOOL SELECTION
+  // =====================================================================
+  setTool(t, btn) {
+    // Ao clicar em Brush, cancelar imediatamente qualquer seleção Rect.
+    if (t === 'brush' && (this.selection || this.isSelecting)) {
+      this.clearSelection();
+    }
+
+    this.tool = t;
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    // Toggle text options
+    const textOpts = document.getElementById('textOptions');
+    textOpts.classList.toggle('hidden', t !== 'text');
+
+    // Cursor
+    if (t === 'move') this.canvas.style.cursor = 'move';
+    else if (t === 'picker') this.canvas.style.cursor = 'copy';
+    else if (t === 'text') this.canvas.style.cursor = 'text';
+    else this.canvas.style.cursor = 'crosshair';
+  },
+
+  // =====================================================================
+  // DRAW
+  // =====================================================================
+  drawFrameTo(ctx, frame, size) {
+    const cell = size / 64;
+    const grid = frame._grid;
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 64; x++) {
+        const color = grid[y][x];
+        if (!color) continue;
+        ctx.fillStyle = color;
+        ctx.fillRect(x * cell, y * cell, cell, cell);
+      }
+    }
+  },
+
+  drawSingleFrameToMain(frame) {
+    const opacity = frame._opacity ?? 1;
+    this.ctx.globalAlpha = opacity;
+    const grid = frame._grid;
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 64; x++) {
+        const color = grid[y][x];
+        if (!color) continue;
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    this.ctx.globalAlpha = 1;
+  },
+
+  draw() {
+    if (this.isPlaying) return;
+    this.ctx.clearRect(0, 0, 64, 64);
+    const frames = this.project[this.direction][this.anim].frames;
+    frames.forEach(frame => {
+      if (!frame._visible) return;
+      const opacity = frame._opacity ?? 1;
+      if (opacity <= 0) return;
+      this.drawSingleFrameToMain(frame);
+    });
+    this.drawOverlay();
+  },
+
+  // =====================================================================
+  // OVERLAY (mirror lines, selection)
+  // =====================================================================
+  drawOverlay() {
+    this.overlayCtx.clearRect(0, 0, 64, 64);
+
+    // Mirror guide lines
+    if (this.mirrorH) {
+      this.overlayCtx.save();
+      this.overlayCtx.strokeStyle = 'rgba(167, 139, 250, 0.5)';
+      this.overlayCtx.lineWidth = 0.4;
+      this.overlayCtx.setLineDash([1, 3]);
+      this.overlayCtx.beginPath();
+      this.overlayCtx.moveTo(SIZE / 2 + 0.5, 0);
+      this.overlayCtx.lineTo(SIZE / 2 + 0.5, SIZE);
+      this.overlayCtx.stroke();
+      this.overlayCtx.restore();
+    }
+    if (this.mirrorV) {
+      this.overlayCtx.save();
+      this.overlayCtx.strokeStyle = 'rgba(167, 139, 250, 0.5)';
+      this.overlayCtx.lineWidth = 0.4;
+      this.overlayCtx.setLineDash([1, 3]);
+      this.overlayCtx.beginPath();
+      this.overlayCtx.moveTo(0, SIZE / 2 + 0.5);
+      this.overlayCtx.lineTo(SIZE, SIZE / 2 + 0.5);
+      this.overlayCtx.stroke();
+      this.overlayCtx.restore();
+    }
+
+    // Selection rect
+    if (this.selection && this.selection.type === 'rect') {
+      let rx = this.selection.rect.x;
+      let ry = this.selection.rect.y;
+      const w = this.selection.rect.w;
+      const h = this.selection.rect.h;
+      if (this.isFloatingMove) { rx += this.floatOffsetX; ry += this.floatOffsetY; }
+      this.overlayCtx.save();
+      this.overlayCtx.fillStyle = 'rgba(167, 139, 250, 0.15)';
+      this.overlayCtx.fillRect(rx, ry, w, h);
+      this.overlayCtx.strokeStyle = '#fff';
+      this.overlayCtx.lineWidth = 0.5;
+      this.overlayCtx.setLineDash([2, 2]);
+      this.overlayCtx.strokeRect(rx + 0.25, ry + 0.25, w, h);
+      this.overlayCtx.restore();
+    }
+
+    // Selection preview (while dragging)
+    if (this.isSelecting && this.selectStart && this.previewPt) {
+      const x0 = Math.min(this.selectStart[0], this.previewPt[0]);
+      const y0 = Math.min(this.selectStart[1], this.previewPt[1]);
+      const w = Math.abs(this.previewPt[0] - this.selectStart[0]) + 1;
+      const h = Math.abs(this.previewPt[1] - this.selectStart[1]) + 1;
+      this.overlayCtx.save();
+      this.overlayCtx.fillStyle = 'rgba(167, 139, 250, 0.2)';
+      this.overlayCtx.fillRect(x0, y0, w, h);
+      this.overlayCtx.strokeStyle = '#fff';
+      this.overlayCtx.setLineDash([2, 2]);
+      this.overlayCtx.lineWidth = 0.5;
+      this.overlayCtx.strokeRect(x0 + 0.25, y0 + 0.25, w, h);
+      this.overlayCtx.restore();
+    }
+  },
+
+  // =====================================================================
+  // PLAY
+  // =====================================================================
+  togglePlay() {
+    this.isPlaying = !this.isPlaying;
+    const btn = document.getElementById('playBtn');
+    const modeLabel = document.getElementById('modeLabel');
+    const body = document.body;
+
+    if (this.isPlaying) {
+      btn.classList.add('playing');
+      btn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop';
+      modeLabel.innerHTML = '🎬 <strong class="text-emerald-300">PREVIEW</strong>';
+      body.classList.add('playing');
+      this.canvas.classList.add('playing-mode');
+      this.playFrameIdx = 0;
+      this.startPlay();
+    } else {
+      btn.classList.remove('playing');
+      btn.innerHTML = '<i class="fa-solid fa-play"></i> Play';
+      modeLabel.innerHTML = '🎨 <strong class="text-violet-300">EDIT</strong>';
+      body.classList.remove('playing');
+      this.canvas.classList.remove('playing-mode');
+      if (this.playTimer) clearInterval(this.playTimer);
+      this.playTimer = null;
+      this.draw();
+    }
+  },
+
+  startPlay() {
+    if (this.playTimer) clearInterval(this.playTimer);
+    const frames = this.project[this.direction][this.anim].frames;
+    if (frames.length === 0) return;
+    this.renderPlayFrame();
+    this.playTimer = setInterval(() => {
+      let next = this.playFrameIdx;
+      for (let i = 0; i < frames.length; i++) {
+        next = (next + 1) % frames.length;
+        if (frames[next]._visible) break;
+      }
+      this.playFrameIdx = next;
+      this.renderPlayFrame();
+    }, 1000 / this.fps);
+  },
+
+  renderPlayFrame() {
+    this.ctx.clearRect(0, 0, 64, 64);
+    const frames = this.project[this.direction][this.anim].frames;
+    const frame = frames[this.playFrameIdx];
+    if (!frame) return;
+    this.ctx.globalAlpha = 1;
+    const grid = frame._grid;
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 64; x++) {
+        const color = grid[y][x];
+        if (!color) continue;
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    document.getElementById('frameInfo').textContent =
+      `${this.playFrameIdx + 1}/${frames.length}`;
+  },
+
+  setFps(val) {
+    this.fps = parseInt(val);
+    document.getElementById('fpsVal').textContent = val;
+    if (this.isPlaying) this.startPlay();
+  },
+
+  // =====================================================================
+  // COLOR HELPERS
+  // =====================================================================
+  hexToRgb(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  },
+
+  colorDistance(c1, c2) {
+    const [r1, g1, b1] = this.hexToRgb(c1);
+    const [r2, g2, b2] = this.hexToRgb(c2);
+    return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+  },
+
+  colorMatches(c1, c2) {
+    if (!c1 || !c2) return c1 === c2;
+    return this.colorDistance(c1, c2) <= this.tolerance;
+  },
+
+  hexToRgba(hex, alpha) {
+    const [r, g, b] = this.hexToRgb(hex);
+    return `rgba(${r},${g},${b},${alpha})`;
+  },
+
+  // =====================================================================
+  // DRAWING OPERATIONS
+  // =====================================================================
+  drawWithMirror(x, y, drawFn) {
+    drawFn(x, y);
+    if (this.mirrorH) {
+      const mx = Math.floor(SIZE - 1 - x);
+      drawFn(mx, y);
+    }
+    if (this.mirrorV) {
+      const my = Math.floor(SIZE - 1 - y);
+      drawFn(x, my);
+    }
+    if (this.mirrorH && this.mirrorV) {
+      const mx = Math.floor(SIZE - 1 - x);
+      const my = Math.floor(SIZE - 1 - y);
+      drawFn(mx, my);
+    }
+  },
+
+  setPixelIfInside(x, y, color) {
+    if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return;
+    if (!this.isInsideSelection(x, y)) return;
+    this.currentGrid[y][x] = color;
+  },
+
+  // Aplica a cor com alpha por cima da cor existente (alpha compositing).
+  // Diferente de setPixelIfInside(), NUNCA apaga o pixel de baixo —
+  // apenas mistura. Ideal para Glow / brushes com opacidade.
+  blendPixel(x, y, hex, alpha) {
+    if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return;
+    if (!this.isInsideSelection(x, y)) return;
+    if (alpha <= 0) return;
+    if (alpha >= 1) { this.currentGrid[y][x] = hex; return; }
+
+    const existing = this.currentGrid[y][x];
+    if (!existing) {
+      // Sem cor de fundo: guarda a cor com alpha embutido (rgba)
+      this.currentGrid[y][x] = this.hexToRgba(hex, alpha);
+      return;
+    }
+
+    // Se a cor existente é rgba (foi pintada com alpha antes),
+    // extraímos os componentes; senão tratamos como opaca.
+    const src = this.parseColor(hex);
+    const dst = this.parseColor(existing);
+
+    // Alpha final (composição "source over destination")
+    const outA = alpha + dst.a * (1 - alpha);
+    if (outA <= 0) { this.currentGrid[y][x] = null; return; }
+
+    const mix = (s, d) => Math.round((s * alpha + d * dst.a * (1 - alpha)) / outA);
+    const r = mix(src.r, dst.r);
+    const g = mix(src.g, dst.g);
+    const b = mix(src.b, dst.b);
+
+    if (outA >= 0.999) {
+      this.currentGrid[y][x] = '#' + [r, g, b]
+        .map(v => v.toString(16).padStart(2, '0')).join('');
+    } else {
+      this.currentGrid[y][x] = `rgba(${r},${g},${b},${outA.toFixed(3)})`;
+    }
+  },
+
+  // Aceita "#rrggbb" ou "rgba(r,g,b,a)" e devolve {r,g,b,a}
+  parseColor(c) {
+    if (!c) return { r: 0, g: 0, b: 0, a: 0 };
+    if (c.startsWith('#')) {
+      const n = parseInt(c.slice(1), 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 1 };
+    }
+    const m = c.match(/rgba?\(([^)]+)\)/);
+    if (m) {
+      const p = m[1].split(',').map(v => parseFloat(v.trim()));
+      return { r: p[0] | 0, g: p[1] | 0, b: p[2] | 0, a: p[3] ?? 1 };
+    }
+    return { r: 0, g: 0, b: 0, a: 0 };
+  },
+
+  // =====================================================================
+  // BRUSH EFFECTS
+  // =====================================================================
+  brushNormal(x, y) {
+    const half = Math.floor(this.brushSize / 2);
+    const useAlpha = this.brushEffect === 'glow' || this.brushOpacity < 1;
+    for (let dy = -half; dy < this.brushSize - half; dy++) {
+      for (let dx = -half; dx < this.brushSize - half; dx++) {
+        if (useAlpha) {
+          this.blendPixel(x + dx, y + dy, this.activeColor, this.brushOpacity);
+        } else {
+          this.setPixelIfInside(x + dx, y + dy, this.activeColor);
+        }
+      }
+    }
+  },
+
+  brushSpray(x, y) {
+    const density = Math.max(5, this.brushSize * 2);
+    for (let i = 0; i < density; i++) {
+      const ox = (Math.random() - 0.5) * this.brushSize * 2;
+      const oy = (Math.random() - 0.5) * this.brushSize * 2;
+      if (ox * ox + oy * oy <= this.brushSize * this.brushSize) {
+        this.blendPixel(Math.round(x + ox), Math.round(y + oy),
+                        this.activeColor, this.brushOpacity);
+      }
+    }
+  },
+
+  brushGlow(x, y) {
+    const halo = Math.max(2, this.brushSize);
+    for (let dy = -halo; dy <= halo; dy++) {
+      for (let dx = -halo; dx <= halo; dx++) {
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d > this.brushSize) continue;
+        // Alpha decresce do centro para a borda; multiplica pela opacidade do pincel
+        const falloff = Math.max(0.15, 1 - (d / this.brushSize));
+        const alpha = falloff * this.brushOpacity;
+        // Blend: nunca apaga — apenas adiciona luminosidade
+        this.blendPixel(x + dx, y + dy, this.activeColor, alpha);
+      }
+    }
+  },
+
+  brushTexture(x, y) {
+    const count = Math.floor(this.brushSize / 2) + 2;
+    for (let i = 0; i < count; i++) {
+      const rx = Math.round(x + (Math.random() - 0.5) * this.brushSize);
+      const ry = Math.round(y + (Math.random() - 0.5) * this.brushSize);
+      this.blendPixel(rx, ry, this.activeColor, this.brushOpacity);
+    }
+  },
+
+  drawBrush(x, y) {
+    const fn = {
+      'normal': this.brushNormal,
+      'spray': this.brushSpray,
+      'glow': this.brushGlow,
+      'texture': this.brushTexture
+    }[this.brushEffect] || this.brushNormal;
+
+    this.drawWithMirror(x, y, (px, py) => fn.call(this, px, py));
+  },
+
+  eraseAt(x, y) {
+    const half = Math.floor(this.brushSize / 2);
+    for (let dy = -half; dy < this.brushSize - half; dy++) {
+      for (let dx = -half; dx < this.brushSize - half; dx++) {
+        const px = x + dx, py = y + dy;
+        if (px < 0 || px >= SIZE || py < 0 || py >= SIZE) continue;
+        if (!this.isInsideSelection(px, py)) continue;
+        this.currentGrid[py][px] = null;
+      }
+    }
+  },
+
+  erase(x, y) {
+    this.drawWithMirror(x, y, (px, py) => this.eraseAt(px, py));
+  },
+
+  // =====================================================================
+  // BUCKET / WAND (flood fill by color tolerance)
+  // =====================================================================
+  floodFill(x, y, replace) {
+    if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return;
+    const targetColor = this.currentGrid[y][x];
+    const fillColor = replace ? null : this.activeColor;
+
+    // Same color? skip
+    if (!replace) {
+      if (targetColor === fillColor) return;
+    } else {
+      if (!targetColor) return;
+    }
+
+    const stack = [[x, y]];
+    const visited = new Set();
+
+    while (stack.length) {
+      const [cx, cy] = stack.pop();
+      if (cx < 0 || cx >= SIZE || cy < 0 || cy >= SIZE) continue;
+      const key = cy * SIZE + cx;
+      if (visited.has(key)) continue;
+      visited.add(key);
+
+      const current = this.currentGrid[cy][cx];
+      // Match by color or by "both empty"
+      let matches;
+      if (!targetColor) {
+        matches = !current;
+      } else {
+        matches = current && this.colorMatches(current, targetColor);
+      }
+      if (!matches) continue;
+      if (!this.isInsideSelection(cx, cy)) continue;
+
+      this.currentGrid[cy][cx] = fillColor;
+      stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+    }
+  },
+
+  magicWand(x, y) {
+    // Same as flood but erases (makes transparent)
+    const targetColor = this.currentGrid[y][x];
+    if (!targetColor) return;
+    const stack = [[x, y]];
+    const visited = new Set();
+    while (stack.length) {
+      const [cx, cy] = stack.pop();
+      if (cx < 0 || cx >= SIZE || cy < 0 || cy >= SIZE) continue;
+      const key = cy * SIZE + cx;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      const current = this.currentGrid[cy][cx];
+      if (!current || !this.colorMatches(current, targetColor)) continue;
+      this.currentGrid[cy][cx] = null;
+      stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+    }
+  },
+
+  pickColor(x, y) {
+    if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return;
+    const color = this.currentGrid[y][x];
+    if (!color) return;
+    this.setColor(color);
+    this.flash('✓ Picked ' + color.toUpperCase());
+  },
+
+  // =====================================================================
+  // TEXT TOOL
+  // =====================================================================
+  drawText(text, startX, startY) {
+    const CHAR_W = 5, CHAR_H = 7, SPACING = 1;
+    const chars = text.toUpperCase().split('');
+    let cursorX = startX;
+    const color = this.activeColor;
+
+    chars.forEach(ch => {
+      const glyph = PIXEL_FONT[ch] || PIXEL_FONT['?'];
+      if (glyph) {
+        for (let y = 0; y < CHAR_H; y++) {
+          for (let x = 0; x < CHAR_W; x++) {
+            if (glyph[y][x]) {
+              this.setPixelIfInside(cursorX + x, startY + y, color);
+            }
+          }
+        }
+      }
+      cursorX += (CHAR_W + SPACING);
+    });
+  },
+
+  // =====================================================================
+  // SELECTION HELPERS
+  // =====================================================================
+  isInsideSelection(x, y) {
+    if (!this.selection) return true;
+    let cx = x, cy = y;
+    if (this.isFloatingMove) {
+      cx -= this.floatOffsetX;
+      cy -= this.floatOffsetY;
+    }
+    if (this.selection.type === 'rect') {
+      const { x: sx, y: sy, w, h } = this.selection.rect;
+      return cx >= sx && cx < sx + w && cy >= sy && cy < sy + h;
+    }
+    return true;
+  },
+
+  clearSelection() {
+    if (this.isFloatingMove) this.commitFloatMove();
+    this.isFloatingMove = false;
+    this.floatBuffer = null;
+    this.floatOffsetX = 0;
+    this.floatOffsetY = 0;
+    this.selection = null;
+    this.isSelecting = false;
+    this.selectStart = null;
+    this.previewPt = null;
+    this.drawOverlay();
+  },
+
+  startFloatMove() {
+    if (!this.selection || this.selection.type !== 'rect') return;
+    const { x, y, w, h } = this.selection.rect;
+    this.isFloatingMove = true;
+    this.floatOffsetX = 0;
+    this.floatOffsetY = 0;
+    this.floatBuffer = document.createElement('canvas');
+    this.floatBuffer.width = SIZE;
+    this.floatBuffer.height = SIZE;
+    const fctx = this.floatBuffer.getContext('2d');
+
+    // Copy selection content
+    for (let yy = y; yy < y + h; yy++) {
+      for (let xx = x; xx < x + w; xx++) {
+        if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        const color = this.currentGrid[yy][xx];
+        if (color) {
+          fctx.fillStyle = color;
+          fctx.fillRect(xx, yy, 1, 1);
+        }
+      }
+    }
+
+    // Clear original
+    for (let yy = y; yy < y + h; yy++) {
+      for (let xx = x; xx < x + w; xx++) {
+        if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        this.currentGrid[yy][xx] = null;
+      }
+    }
+
+    this.draw();
+  },
+
+  commitFloatMove() {
+    if (!this.isFloatingMove || !this.floatBuffer) return;
+    const fctx = this.floatBuffer.getContext('2d');
+    const imgData = fctx.getImageData(0, 0, SIZE, SIZE).data;
+
+    for (let yy = 0; yy < SIZE; yy++) {
+      for (let xx = 0; xx < SIZE; xx++) {
+        const i = (yy * SIZE + xx) * 4;
+        const a = imgData[i + 3];
+        if (a === 0) continue;
+        const dx = xx + this.floatOffsetX;
+        const dy = yy + this.floatOffsetY;
+        if (dx < 0 || dx >= SIZE || dy < 0 || dy >= SIZE) continue;
+        const r = imgData[i];
+        const g = imgData[i + 1];
+        const b = imgData[i + 2];
+        this.currentGrid[dy][dx] = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+      }
+    }
+
+    // Update selection rect position
+    if (this.selection && this.selection.type === 'rect') {
+      this.selection.rect.x += this.floatOffsetX;
+      this.selection.rect.y += this.floatOffsetY;
+    }
+
+    this.isFloatingMove = false;
+    this.floatBuffer = null;
+    this.floatOffsetX = 0;
+    this.floatOffsetY = 0;
+    this.draw();
+  },
+
+  // =====================================================================
+  // MOUSE
+  // =====================================================================
+  bindCanvas() {
+    const canvas = this.canvas;
+
+    const getCoords = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        cx: Math.floor((e.clientX - rect.left) / rect.width * SIZE),
+        cy: Math.floor((e.clientY - rect.top) / rect.height * SIZE),
+      };
+    };
+
+    const paintAt = (cx, cy) => {
+      if (cx < 0 || cx >= SIZE || cy < 0 || cy >= SIZE) return;
+      if (this.tool === 'brush') this.drawBrush(cx, cy);
+      else if (this.tool === 'eraser') this.erase(cx, cy);
+      this.draw();
+    };
+
+    canvas.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      if (this.isPlaying) return;
+      const { cx, cy } = getCoords(e);
+      document.getElementById('posInfo').textContent = `${cx},${cy}`;
+      if (cx < 0 || cx >= SIZE || cy < 0 || cy >= SIZE) return;
+
+      // Right-click = erase (any tool)
+      if (e.button === 2) {
+        this.erasingRightClick = true;
+        this.drawWithMirror(cx, cy, (px, py) => this.eraseAt(px, py));
+        this.draw();
+        return;
+      }
+
+      // LEFT CLICK
+      if (e.button !== 0) return;
+
+      // TOOL: PICKER
+      if (this.tool === 'picker') {
+        this.pickColor(cx, cy);
+        return;
+      }
+
+      // TOOL: BUCKET
+      if (this.tool === 'bucket') {
+        this.floodFill(cx, cy, false);
+        this.draw();
+        return;
+      }
+
+      // TOOL: WAND
+      if (this.tool === 'wand') {
+        this.magicWand(cx, cy);
+        this.draw();
+        return;
+      }
+
+      // TOOL: TEXT
+      if (this.tool === 'text') {
+        const txt = document.getElementById('textInput').value;
+        if (!txt) {
+          this.flash('Type text first');
+          return;
+        }
+        this.drawText(txt, cx, cy);
+        this.draw();
+        return;
+      }
+
+      // TOOL: RECT
+      if (this.tool === 'rect') {
+        this.clearSelection();
+        this.isSelecting = true;
+        this.selectStart = [cx, cy];
+        this.previewPt = [cx, cy];
+        this.drawOverlay();
+        return;
+      }
+
+      // TOOL: MOVE
+      if (this.tool === 'move') {
+        if (!this.selection) {
+          this.flash('Make a selection first (Rect tool)');
+          return;
+        }
+        if (!this.isFloatingMove) {
+          this.startFloatMove();
+        }
+        this.isDrawing = true;
+        this.floatStartMouseX = cx;
+        this.floatStartMouseY = cy;
+        return;
+      }
+
+      // TOOL: BRUSH / ERASER
+      this.isDrawing = true;
+      this.lastX = cx;
+      this.lastY = cy;
+      paintAt(cx, cy);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (this.isPlaying) return;
+      const { cx, cy } = getCoords(e);
+      if (cx >= 0 && cx < SIZE && cy >= 0 && cy < SIZE) {
+        document.getElementById('posInfo').textContent = `${cx},${cy}`;
+      }
+
+      // Right-click erase drag
+      if (this.erasingRightClick && e.buttons === 2) {
+        this.drawWithMirror(cx, cy, (px, py) => this.eraseAt(px, py));
+        this.draw();
+        return;
+      }
+
+      // Rect selection drag
+      if (this.isSelecting && this.selectStart) {
+        this.previewPt = [cx, cy];
+        this.drawOverlay();
+        return;
+      }
+
+      // Move floating drag
+      if (this.isDrawing && this.tool === 'move' && this.isFloatingMove) {
+        this.floatOffsetX = cx - this.floatStartMouseX;
+        this.floatOffsetY = cy - this.floatStartMouseY;
+        this.draw();
+        return;
+      }
+
+      // Brush/eraser drag
+      if (this.isDrawing && (this.tool === 'brush' || this.tool === 'eraser')) {
+        if (this.lastX !== null) {
+          this.lineTo(this.lastX, this.lastY, cx, cy, (px, py) => paintAt(px, py));
+        }
+        this.lastX = cx;
+        this.lastY = cy;
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      this.erasingRightClick = false;
+
+      // Finalize rect selection
+      if (this.isSelecting && this.selectStart && this.previewPt) {
+        const [x0, y0] = this.selectStart;
+        const [x1, y1] = this.previewPt;
+        const sx = Math.min(x0, x1);
+        const sy = Math.min(y0, y1);
+        const w = Math.abs(x1 - x0) + 1;
+        const h = Math.abs(y1 - y0) + 1;
+        if (w > 0 && h > 0) {
+          this.selection = { type: 'rect', rect: { x: sx, y: sy, w, h } };
+        }
+        this.isSelecting = false;
+        this.selectStart = null;
+        this.previewPt = null;
+        this.drawOverlay();
+        return;
+      }
+
+      // Finalize move
+      if (this.isDrawing && this.tool === 'move' && this.isFloatingMove) {
+        this.isDrawing = false;
+        this.commitFloatMove();
+        return;
+      }
+
+      this.isDrawing = false;
+      this.lastX = null;
+      this.lastY = null;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      document.getElementById('posInfo').textContent = '-,-';
+    });
+
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  },
+
+  lineTo(x0, y0, x1, y1, fn) {
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    while (true) {
+      fn(x0, y0);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx) { err += dx; y0 += sy; }
+    }
+  },
+
+  // =====================================================================
+  // KEYBOARD
+  // =====================================================================
+  bindKeyboard() {
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.target.isContentEditable) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this.togglePlay();
+        return;
+      }
+      if (e.key === 'Escape') {
+        this.clearSelection();
+        return;
+      }
+
+      const map = {
+        'b': 'brush', 'e': 'eraser', 'g': 'bucket', 'w': 'wand',
+        'i': 'picker', 'm': 'rect', 'v': 'move', 't': 'text'
+      };
+      const t = map[e.key.toLowerCase()];
+      if (t) {
+        const btn = document.querySelector(`[data-tool="${t}"]`);
+        this.setTool(t, btn);
+      }
+    });
+  },
+
+  // =====================================================================
+  // IMPORT / EXPORT PROJECT
+  // =====================================================================
+  exportProject() {
+    const data = {
+      project: this.project,
+      favorites: this.favorites,
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'character-project.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    this.flash('✓ Project exported!');
+  },
+
+  importProject(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.project) {
+          ['front', 'side', 'back'].forEach(dir => {
+            ['idle', 'walk', 'parado'].forEach(anim => {
+              data.project[dir][anim].frames.forEach(frame => {
+                if (!frame._grid && frame.grid) frame._grid = frame.grid;
+                frame._opacity = frame.opacity ?? 1;
+                frame._visible = frame.visible !== false;
+              });
+            });
+          });
+
+          this.project = data.project;
+          if (data.favorites) {
+            this.favorites = data.favorites;
+            localStorage.setItem('bravosgamebr_favorites', JSON.stringify(this.favorites));
+          }
+          this.buildFavorites();
+          this.buildFramesList();
+          this.updateOpacitySlider();
+          this.draw();
+          this.updateInfo();
+          this.flash('✓ Project imported!');
+        } else {
+          alert('Invalid format');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  },
+
+  // =====================================================================
+  // EXPORT PNG
+  // =====================================================================
+  exportPNG() {
+    const frames = this.project[this.direction][this.anim].frames;
+    const out = document.createElement('canvas');
+    out.width = 64 * frames.length;
+    out.height = 64;
+    const octx = out.getContext('2d');
+    octx.imageSmoothingEnabled = false;
+    frames.forEach((frame, i) => {
+      const tmp = document.createElement('canvas');
+      tmp.width = 64;
+      tmp.height = 64;
+      const tctx = tmp.getContext('2d');
+      tctx.imageSmoothingEnabled = false;
+      this.drawFrameTo(tctx, frame, 64);
+      octx.drawImage(tmp, i * 64, 0);
+    });
+    const link = document.createElement('a');
+    link.download = `character-${this.direction}-${this.anim}.png`;
+    link.href = out.toDataURL('image/png');
+    link.click();
+  },
+
+  // =====================================================================
+  // CLEAR
+  // =====================================================================
+  clearFrame() {
+    if (this.isPlaying) return;
+    if (!confirm('Clear current frame?')) return;
+    this.currentFrame._grid = emptyGrid64();
+    this.draw();
+  },
+
+  // =====================================================================
+  // ZOOM
+  // =====================================================================
+  zoomIn()  { this.zoom = Math.min(16, this.zoom + 1); this.updateZoom(); },
+  zoomOut() { this.zoom = Math.max(2,  this.zoom - 1); this.updateZoom(); },
+  updateZoom() {
+    document.getElementById('zoomVal').textContent = (this.zoom * 100) + '%';
+    const px = 64 * this.zoom;
+    this.canvas.style.width = px + 'px';
+    this.canvas.style.height = px + 'px';
+    this.overlayCanvas.style.width = px + 'px';
+    this.overlayCanvas.style.height = px + 'px';
+  },
+
+  flash(msg) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 22px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 30px rgba(16,185,129,0.6);';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; t.style.transition='0.4s'; setTimeout(() => t.remove(), 400); }, 1500);
+  },
+};
+
+window.addEventListener('load', () => ed.init());
+</script>
+</body>
+</html>

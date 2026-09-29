@@ -891,6 +891,9 @@ const ed = {
   undoStack: [],           // snapshot stack
   undoMaxSize: 50,         // max states kept
 
+  // Rect copy/paste (Ctrl+C / Ctrl+V)
+  rectClipboard: null,     // { grid, w, h } — área copiada
+
   favorites: [],
 
   init() {
@@ -2125,6 +2128,76 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.flash(`🗑️ ${apagados} pixel(s) deleted`);
   },
 
+  // Copia o conteúdo da seleção Rect pra um buffer interno.
+  // A seleção continua ativa depois (pra você poder colar em outro lugar).
+  copySelection() {
+    if (this.isPlaying) return;
+    if (!this.selection || this.selection.type !== 'rect') {
+      this.flash('No active selection — use Rect (M) first');
+      return;
+    }
+
+    const { x, y, w, h } = this.selection.rect;
+    // Cria uma grid separada (do tamanho da seleção)
+    const buffer = Array.from({ length: h }, () => Array(w).fill(null));
+    let copiados = 0;
+
+    for (let yy = 0; yy < h; yy++) {
+      for (let xx = 0; xx < w; xx++) {
+        const srcX = x + xx;
+        const srcY = y + yy;
+        if (srcX < 0 || srcX >= SIZE || srcY < 0 || srcY >= SIZE) continue;
+        const color = this.currentGrid[srcY][srcX];
+        buffer[yy][xx] = color;
+        if (color !== null) copiados++;
+      }
+    }
+
+    this.rectClipboard = { grid: buffer, w, h };
+    this.flash(`📋 Copied ${copiados} pixel(s) [${w}×${h}]`);
+  },
+
+  // Cola o conteúdo do buffer no canto superior-esquerdo da seleção atual.
+  // Se a seleção for menor que o buffer, cola só a parte que cabe.
+  // Se a seleção não existir, cola na posição (0,0) do frame.
+  pasteSelection() {
+    if (this.isPlaying) return;
+    if (!this.rectClipboard) {
+      this.flash('⚠️ Clipboard empty — use Ctrl+C first');
+      return;
+    }
+
+    this.pushUndo('paste rect');
+
+    const { grid: buf, w: bw, h: bh } = this.rectClipboard;
+
+    // Onde colar? Se houver seleção ativa, usa o canto dela.
+    // Senão, cola em (0,0).
+    let destX = 0;
+    let destY = 0;
+    if (this.selection && this.selection.type === 'rect') {
+      destX = this.selection.rect.x;
+      destY = this.selection.rect.y;
+    }
+
+    let colados = 0;
+    for (let yy = 0; yy < bh; yy++) {
+      for (let xx = 0; xx < bw; xx++) {
+        const color = buf[yy][xx];
+        if (color === null) continue;   // pixel transparente não sobrescreve
+        const px = destX + xx;
+        const py = destY + yy;
+        if (px < 0 || px >= SIZE || py < 0 || py >= SIZE) continue;
+        this.currentGrid[py][px] = color;
+        colados++;
+      }
+    }
+
+    this.buildFramesList();
+    this.draw();
+    this.flash(`📋 Pasted ${colados} pixel(s) at (${destX}, ${destY})`);
+  },
+
   startFloatMove() {
     if (!this.selection || this.selection.type !== 'rect') return;
     const { x, y, w, h } = this.selection.rect;
@@ -2435,6 +2508,18 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         this.undo();
+        return;
+      }
+      // Ctrl+C = copiar área selecionada (Rect)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        this.copySelection();
+        return;
+      }
+      // Ctrl+V = colar área copiada na seleção atual (Rect)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        this.pasteSelection();
         return;
       }
 

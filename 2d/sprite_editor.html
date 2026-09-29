@@ -2450,24 +2450,34 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   },
 
   // =====================================================================
-  // EXPORT PNG
+  // EXPORT PNG — GRID 16 colunas (em vez de linha horizontal)
   // =====================================================================
   exportPNG() {
     const frames = this.project[this.direction][this.anim].frames;
+    const COLS = 16;                                    // 16 colunas fixas
+    const rows = Math.ceil(frames.length / COLS);       // linhas necessárias
+
     const out = document.createElement('canvas');
-    out.width = 64 * frames.length;
-    out.height = 64;
+    out.width  = 64 * COLS;                             // sempre 1024px
+    out.height = 64 * rows;                             // múltiplo de 64
     const octx = out.getContext('2d');
     octx.imageSmoothingEnabled = false;
+
     frames.forEach((frame, i) => {
+      const col = i % COLS;                             // coluna no grid
+      const row = Math.floor(i / COLS);                 // linha no grid
+
       const tmp = document.createElement('canvas');
       tmp.width = 64;
       tmp.height = 64;
       const tctx = tmp.getContext('2d');
       tctx.imageSmoothingEnabled = false;
       this.drawFrameTo(tctx, frame, 64);
-      octx.drawImage(tmp, i * 64, 0);
+
+      // Desenha o frame na posição correta do grid
+      octx.drawImage(tmp, col * 64, row * 64);
     });
+
     const link = document.createElement('a');
     link.download = `character-${this.direction}-${this.anim}.png`;
     link.href = out.toDataURL('image/png');

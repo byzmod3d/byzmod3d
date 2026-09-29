@@ -2225,9 +2225,17 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       this.flash('No active selection — use Rect (M) first');
       return;
     }
+
+    // Se já está em rotate, não faz nada
     if (this.rotateMode) {
       this.flash('Already in rotate mode');
       return;
+    }
+
+    // Se está em grab, primeiro aplica o grab (fixa a posição atual)
+    // e depois entra em rotate a partir daí.
+    if (this.grabMode) {
+      this._commitGrab();
     }
 
     const { x, y, w, h } = this.selection.rect;
@@ -2469,36 +2477,135 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   // Você pode arrastar o conteúdo rotacionado pra onde quiser.
   enterGrabMode() {
     if (this.isPlaying) return;
-    if (!this.rotateMode) {
-      this.flash('Enter rotate mode first (R)');
+
+    // Se está em grab, não faz nada
+    if (this.grabMode) {
+      this.flash('Already in grab mode');
       return;
     }
 
-    // Salva APENAS a parte rotacionada (o que sobrou depois de
-    // remover o background). Sem isso, o grab move a tela toda.
-    const bg = this.rotateBackground;
-    const rotated = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
-
-    for (let yy = 0; yy < SIZE; yy++) {
-      for (let xx = 0; xx < SIZE; xx++) {
-        const cur = this.currentGrid[yy][xx];
-        const back = bg ? bg[yy][xx] : null;
-        // Só guarda o que NÃO está no background (ou seja, o rotacionado)
-        if (cur !== back) {
-          rotated[yy][xx] = cur;
+    // CASO 1: já está em rotate → trava a rotação e entra em grab
+    if (this.rotateMode) {
+      const bg = this.rotateBackground;
+      const rotated = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+      for (let yy = 0; yy < SIZE; yy++) {
+        for (let xx = 0; xx < SIZE; xx++) {
+          const cur = this.currentGrid[yy][xx];
+          const back = bg ? bg[yy][xx] : null;
+          if (cur !== back) rotated[yy][xx] = cur;
         }
+      }
+      this.grabRotatedGrid = rotated;
+
+      this.grabMode = true;
+      this.grabStartX = null;
+      this.grabStartY = null;
+      this.grabOffsetX = 0;
+      this.grabOffsetY = 0;
+
+      this.flash('✥ Grab mode — move mouse • Left click = apply • Right click = back to rotate');
+      return;
+    }
+
+    // CASO 2: não está em rotate — entra em grab direto da seleção
+    // (copia a seleção pra um buffer, limpa a área, e deixa mover)
+    if (!this.selection || this.selection.type !== 'rect') {
+      this.flash('No active selection — use Rect (M) first');
+      return;
+    }
+
+    const { x, y, w, h } = this.selection.rect;
+
+    // Copia a área selecionada
+    const buf = Array.from({ length: h }, () => Array(w).fill(null));
+    for (let yy = 0; yy < h; yy++) {
+      for (let xx = 0; xx < w; xx++) {
+        const sx = x + xx, sy = y + yy;
+        if (sx < 0 || sx >= SIZE || sy < 0 || sy >= SIZE) continue;
+        buf[yy][xx] = this.currentGrid[sy][sx];
       }
     }
 
-    this.grabRotatedGrid = rotated;
+    // Snapshot pra poder desfazer
+    this.pushUndo('grab');
 
+    // Guarda o background (canvas SEM a seleção)
+    const background = this.currentGrid.map(row => row.slice());
+    for (let yy = y; yy < y + h; yy++) {
+      for (let xx = x; xx < x + w; xx++) {
+        if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        background[yy][xx] = null;
+      }
+    }
+
+    // Guarda a "grid rotacionada" que aqui é só a seleção copiada
+    // (na posição original, pra poder deslocar)
+    const rotated = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+    for (let yy = 0; yy < h; yy++) {
+      for (let xx = 0; xx < w; xx++) {
+        rotated[y + yy][x + xx] = buf[yy][xx];
+      }
+    }
+
+    // Setup do estado (mesmo que o caso 1, mas vindo da seleção)
+    this.rotateBackground = background;
+    this.rotateRect = { x, y, w, h };
+    this.rotateBuffer = { grid: buf, w, h };
+    this.rotateAxisLocalX = w / 2;
+    this.rotateAxisLocalY = h / 2;
+    this.rotateAxisX = x + w / 2;
+    this.rotateAxisY = y + h / 2;
+    this.rotateAngle = 0;
+
+    this.grabRotatedGrid = rotated;
     this.grabMode = true;
     this.grabStartX = null;
     this.grabStartY = null;
     this.grabOffsetX = 0;
     this.grabOffsetY = 0;
 
-    this.flash('✥ Grab mode — move mouse to position • Left click = apply • Right click = back to rotate');
+    this.flash('✥ Grab mode — move mouse • Left click = apply • Right click = cancel');
+  },
+
+  // Aplica o grab silenciosamente (usado quando aperta R durante grab).
+  _commitGrab() {
+    if (!this.grabMode) return;
+
+    // Aplica o offset na grid (já está aplicado no currentGrid via
+    // renderGrabbed, então só limpa o estado e considera a rotação
+    // "aplicada" como base pra próxima rotação).
+    this.grabMode = false;
+    this.grabRotatedGrid = null;
+    this.grabStartX = null;
+    this.grabStartY = null;
+    this.grabOffsetX = 0;
+    this.grabOffsetY = 0;
+
+    // Atualiza o rotateRect pra refletir a nova posição
+    if (this.rotateRect) {
+      this.rotateRect.x += 0;   // já está aplicado na grid
+      this.rotateRect.y += 0;
+    }
+
+    // Atualiza o rotateBuffer pra ser o estado atual (já movido)
+    // assim a próxima rotação vai girar em torno do estado atual
+    const bg = this.rotateBackground;
+    if (bg) {
+      const newBuf = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+      for (let yy = 0; yy < SIZE; yy++) {
+        for (let xx = 0; xx < SIZE; xx++) {
+          const cur = this.currentGrid[yy][xx];
+          const back = bg[yy][xx];
+          if (cur !== back) newBuf[yy][xx] = cur;
+        }
+      }
+      // Guarda a grid toda (será recortada por rotateRect no próximo rotate)
+      this.rotateBackground = bg;
+    }
+
+    // Saiu do rotate pra "aplicar" o grab — mas continua em rotate
+    // pra poder girar de novo
+    this.rotateMode = true;   // volta pro modo rotate
   },
 
   // Atualiza o deslocamento do grab baseado no movimento do mouse.
@@ -2565,7 +2672,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     const offX = this.grabOffsetX;
     const offY = this.grabOffsetY;
 
-    // Limpa tudo do modo grab, mas mantém o resultado na grid
+    // Limpa o modo grab, mas mantém o resultado na grid
     this.grabMode = false;
     this.grabRotatedGrid = null;
     this.grabStartX = null;
@@ -2573,7 +2680,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.grabOffsetX = 0;
     this.grabOffsetY = 0;
 
-    // Sai do rotate mode também (tudo foi aplicado)
+    // Aplica tudo (sai do rotate também)
     this.rotateMode = false;
     this.rotateBuffer = null;
     this.rotateRect = null;

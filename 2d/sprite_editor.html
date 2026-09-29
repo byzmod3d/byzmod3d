@@ -1708,6 +1708,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       const w = this.selection.rect.w;
       const h = this.selection.rect.h;
       if (this.isFloatingMove) { rx += this.floatOffsetX; ry += this.floatOffsetY; }
+
       this._drawSolidRect(rx, ry, w, h, '#ffffff');
     }
 
@@ -2232,10 +2233,11 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       return;
     }
 
-    // Se está em grab, primeiro aplica o grab (fixa a posição atual)
-    // e depois entra em rotate a partir daí.
+    // Se está em grab, "fixa" o grab atual antes de rotacionar.
+    // Isso significa: o estado atual (movido) vira a base pra rotação.
     if (this.grabMode) {
-      this._commitGrab();
+      // Aplica o offset atual na grid de trabalho
+      this._commitGrabOffset();
     }
 
     const { x, y, w, h } = this.selection.rect;
@@ -2252,6 +2254,10 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
     // Snapshot pra poder desfazer depois
     this.pushUndo('rotate');
+
+    // Garante que rotateBackground é reconstruído a partir do estado ATUAL
+    // (evita acúmulo de lixo entre rotações)
+    // (ele é reconstruído logo abaixo no bloco existente)
 
     // Salva estado
     this.rotateMode = true;
@@ -2313,6 +2319,12 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
     this.draw();
     this.flash('🔄 Rotate mode — move mouse to rotate • Left click = apply • Right click = cancel');
+
+    // Debug
+    console.log('[Enter Rotate] rect:', JSON.stringify(this.rotateRect),
+                'buffer:', w + 'x' + h,
+                'angle:', this.rotateAngle,
+                'stack depth:', this.undoStack.length);
   },
 
   // Atualiza a rotação baseado no ângulo do mouse em relação ao
@@ -2349,11 +2361,17 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   // Renderiza a área rotacionada em torno do EIXO FIXO
   // (centro da seleção original). O eixo não muda enquanto gira.
   renderRotated() {
-    if (!this.rotateMode || !this.rotateBuffer || !this.rotateRect) return;
+    if (!this.rotateMode) return;
+    if (!this.rotateBuffer || !this.rotateBuffer.grid) return;
+    if (!this.rotateRect) return;
+    if (!this.rotateBackground) return;
 
     const { grid: buf, w, h } = this.rotateBuffer;
     const rect = this.rotateRect;
     const angle = this.rotateAngle;
+
+    // Proteção: se w ou h forem 0, não faz nada
+    if (w <= 0 || h <= 0) return;
 
     // EIXO FIXO (centro original). Tudo gira em torno deste ponto.
     const axisX = this.rotateAxisX;
@@ -2434,7 +2452,13 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
     this.buildFramesList();
     this.draw();
-    this.flash(`✓ Rotated ${angle}°`);
+    this.flash(`✓ Rotated ${angle}° — back to brush`);
+
+    // Volta pro pincel automaticamente
+    setTimeout(() => {
+      const brushBtn = document.querySelector('[data-tool="brush"]');
+      if (brushBtn) this.setTool('brush', brushBtn);
+    }, 50);
   },
 
   // Cancela a rotação (clique direito ou Esc)
@@ -2487,11 +2511,18 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     // CASO 1: já está em rotate → trava a rotação e entra em grab
     if (this.rotateMode) {
       const bg = this.rotateBackground;
+      if (!bg) {
+        this.flash('⚠️ State error — restarting');
+        this.rotateMode = false;
+        return;
+      }
+
+      // Reconstrói grabRotatedGrid a partir da diferença currentGrid - bg
       const rotated = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
       for (let yy = 0; yy < SIZE; yy++) {
         for (let xx = 0; xx < SIZE; xx++) {
           const cur = this.currentGrid[yy][xx];
-          const back = bg ? bg[yy][xx] : null;
+          const back = bg[yy][xx];
           if (cur !== back) rotated[yy][xx] = cur;
         }
       }
@@ -2504,6 +2535,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       this.grabOffsetY = 0;
 
       this.flash('✥ Grab mode — move mouse • Left click = apply • Right click = back to rotate');
+      console.log('[Enter Grab case1] rotatedGrid size checked, rect:', JSON.stringify(this.rotateRect));
       return;
     }
 
@@ -2557,6 +2589,9 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.rotateAxisY = y + h / 2;
     this.rotateAngle = 0;
 
+    // Sincroniza a seleção visual com a caixa do conteúdo
+    this.selection = { type: 'rect', rect: { x, y, w, h } };
+
     this.grabRotatedGrid = rotated;
     this.grabMode = true;
     this.grabStartX = null;
@@ -2565,6 +2600,116 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.grabOffsetY = 0;
 
     this.flash('✥ Grab mode — move mouse • Left click = apply • Right click = cancel');
+  },
+
+  // Aplica o offset do grab na grid e reconstrói o estado de rotação
+  // (versão que funcionava: 1 ciclo G→R→G).
+  _commitGrabOffset() {
+    if (!this.grabMode) return;
+
+    const offX = this.grabOffsetX;
+    const offY = this.grabOffsetY;
+
+    // 1) Aplica o offset do grab na grid
+    if (offX !== 0 || offY !== 0) {
+      const bg = this.rotateBackground;
+      if (bg && this.grabRotatedGrid) {
+        // Restaura background
+        for (let yy = 0; yy < SIZE; yy++) {
+          for (let xx = 0; xx < SIZE; xx++) {
+            this.currentGrid[yy][xx] = bg[yy][xx];
+          }
+        }
+        // Redesenha com offset
+        for (let yy = 0; yy < SIZE; yy++) {
+          for (let xx = 0; xx < SIZE; xx++) {
+            const color = this.grabRotatedGrid[yy][xx];
+            if (color === null) continue;
+            const px = xx + offX;
+            const py = yy + offY;
+            if (px < 0 || px >= SIZE || py < 0 || py >= SIZE) continue;
+            this.currentGrid[py][px] = color;
+          }
+        }
+      }
+    }
+
+    // 2) Sai do grab
+    this.grabMode = false;
+    this.grabRotatedGrid = null;
+    this.grabStartX = null;
+    this.grabStartY = null;
+    this.grabOffsetX = 0;
+    this.grabOffsetY = 0;
+
+    // 3) RECALCULA a bounding box REAL do conteúdo
+    const bg = this.rotateBackground || this.currentGrid.map(r => r.map(() => null));
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    for (let yy = 0; yy < SIZE; yy++) {
+      for (let xx = 0; xx < SIZE; xx++) {
+        const cur = this.currentGrid[yy][xx];
+        const back = bg[yy][xx];
+        if (cur !== back) {
+          if (xx < minX) minX = xx;
+          if (xx > maxX) maxX = xx;
+          if (yy < minY) minY = yy;
+          if (yy > maxY) maxY = yy;
+        }
+      }
+    }
+
+    if (minX === Infinity) {
+      this.rotateRect = null;
+      return;
+    }
+
+    // 4) bbox real
+    const newRectX = minX;
+    const newRectY = minY;
+    const newRectW = maxX - minX + 1;
+    const newRectH = maxY - minY + 1;
+
+    // 5) Reconstrói rotateBuffer
+    const newBuf = Array.from({ length: newRectH }, () => Array(newRectW).fill(null));
+    for (let yy = 0; yy < newRectH; yy++) {
+      for (let xx = 0; xx < newRectW; xx++) {
+        newBuf[yy][xx] = this.currentGrid[newRectY + yy][newRectX + xx];
+      }
+    }
+
+    // 6) Reconstrói rotateBackground
+    const newBg = bg.map(row => row.slice());
+    for (let yy = newRectY; yy < newRectY + newRectH; yy++) {
+      for (let xx = newRectX; xx < newRectX + newRectW; xx++) {
+        if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        newBg[yy][xx] = null;
+      }
+    }
+
+    // 7) Aplica novo estado
+    this.rotateRect = { x: newRectX, y: newRectY, w: newRectW, h: newRectH };
+    this.rotateBuffer = { grid: newBuf, w: newRectW, h: newRectH };
+    this.rotateBackground = newBg;
+
+    // 8) Eixo
+    const axisLocalX = newRectW / 2;
+    const axisLocalY = newRectH / 2;
+    this.rotateAxisLocalX = axisLocalX;
+    this.rotateAxisLocalY = axisLocalY;
+    this.rotateAxisX = newRectX + axisLocalX;
+    this.rotateAxisY = newRectY + axisLocalY;
+
+    // 9) Ângulo
+    this.rotateAngle = 0;
+
+    // 10) Sincroniza seleção
+    this.selection = { type: 'rect', rect: {
+      x: newRectX, y: newRectY, w: newRectW, h: newRectH
+    }};
+
+    // 11) Redesenha
+    this.drawOverlay();
   },
 
   // Aplica o grab silenciosamente (usado quando aperta R durante grab).
@@ -2634,11 +2779,11 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
   // Renderiza a grid rotacionada deslocada pelo offset.
   renderGrabbed() {
-    if (!this.grabMode || !this.grabRotatedGrid) return;
+    if (!this.grabMode) return;
+    if (!this.grabRotatedGrid) return;
+    if (!this.rotateBackground) return;
 
     const bg = this.rotateBackground;
-    if (!bg) return;
-
     const offX = this.grabOffsetX;
     const offY = this.grabOffsetY;
 
@@ -2694,12 +2839,21 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
     this.buildFramesList();
     this.draw();
-    this.flash(`✓ Applied (moved ${offX}, ${offY})`);
+    this.flash(`✓ Applied (moved ${offX}, ${offY}) — back to brush`);
+
+    // Volta pro pincel automaticamente
+    setTimeout(() => {
+      const brushBtn = document.querySelector('[data-tool="brush"]');
+      if (brushBtn) this.setTool('brush', brushBtn);
+    }, 50);
   },
 
   // Cancela o grab e VOLTA pra rotação travada (não cancela a rotação).
   cancelGrabMode() {
     if (!this.grabMode) return;
+
+    // Salva o estado atual da grid (com o offset aplicado)
+    const gridNow = this.currentGrid.map(row => row.slice());
 
     this.grabMode = false;
     this.grabRotatedGrid = null;
@@ -2707,6 +2861,21 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.grabStartY = null;
     this.grabOffsetX = 0;
     this.grabOffsetY = 0;
+
+    // Reconstrói rotateBuffer/Background a partir do estado atual
+    // (isso garante que a próxima rotação funcione)
+    const bg = this.rotateBackground;
+    if (bg && this.rotateRect) {
+      const rect = this.rotateRect;
+      const newBuf = Array.from({ length: rect.h }, () => Array(rect.w).fill(null));
+      for (let yy = 0; yy < rect.h; yy++) {
+        for (let xx = 0; xx < rect.w; xx++) {
+          newBuf[yy][xx] = gridNow[rect.y + yy]?.[rect.x + xx] ?? null;
+        }
+      }
+      this.rotateBuffer = { grid: newBuf, w: rect.w, h: rect.h };
+      this.rotateAngle = 0;
+    }
 
     // Volta pra rotação travada (renderiza a grid rotacionada novamente)
     this.renderRotated();

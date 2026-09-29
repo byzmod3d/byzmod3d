@@ -168,6 +168,13 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
     box-shadow: 0 0 0 2px rgba(16,185,129,0.35), 0 0 12px rgba(16,185,129,0.7);
     opacity: 1;
   }
+
+  /* Moldura amarela — frame marcado para multi-seleção (Shift+clique) */
+  .frame-thumb.frame-multi {
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 2px rgba(251,191,36,0.4), 0 0 12px rgba(251,191,36,0.75);
+    opacity: 1;
+  }
   .frame-eye {
     position: absolute;
     top: -9px; right: -4px;
@@ -406,6 +413,11 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
           <button onclick="ed.pasteFrame()" id="pasteFrameBtn" class="w-6 h-6 bg-amber-600 hover:bg-amber-500 text-white rounded-md text-xs font-bold flex items-center justify-center" title="Paste clipboard into current frame">
             <i class="fa-solid fa-paste"></i>
           </button>
+          <div class="w-px h-5 bg-[#3a3350] mx-0.5"></div>
+          <button onclick="ed.mergeSelectedFrames()" id="mergeFrameBtn" class="w-6 h-6 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-md text-xs font-bold flex items-center justify-center" title="Merge selected frames (Shift+click frames to mark them)">
+            <i class="fa-solid fa-layer-group"></i>
+          </button>
+          <span id="mergeInfo" class="text-[9px] text-amber-400 ml-1 font-mono"></span>
           <span id="frameClipboardInfo" class="text-[9px] text-slate-500 ml-1 font-mono"></span>
         </div>
         <div id="framesList" class="flex gap-2 flex-wrap"></div>
@@ -867,6 +879,7 @@ const ed = {
   floatStartMouseY: 0,
   clipboardBuffer: null,
   frameClipboard: null,   // { _grid, _opacity, _from } — frame inteiro copiado
+  multiSelected: [],      // índices de frames marcados via Shift+clique
 
   // Play
   isPlaying: false,
@@ -1107,11 +1120,27 @@ const ed = {
           thumb.classList.add('frame-warn');
         }
       }
+      // Multi-seleção (amarelo) tem prioridade visual sobre verde/vermelho
+      if (this.multiSelected.includes(idx)) {
+        thumb.classList.add('frame-multi');
+      }
       if (!frame._visible) thumb.classList.add('hidden-frame');
       const tctx = thumb.getContext('2d');
       tctx.imageSmoothingEnabled = false;
       this.drawFrameTo(tctx, frame, 44);
-      thumb.onclick = () => { if (!this.isPlaying) this.selectFrame(idx); };
+
+      // Clique normal = seleciona o frame para edição.
+      // Shift+clique = marca/desmarca o frame para multi-seleção (merge).
+      thumb.onclick = (e) => {
+        if (this.isPlaying) return;
+        if (e.shiftKey) {
+          this.toggleMultiSelect(idx);
+          return;
+        }
+        // Clique normal limpa a multi-seleção
+        if (this.multiSelected.length > 0) this.multiSelected = [];
+        this.selectFrame(idx);
+      };
       wrapper.appendChild(thumb);
 
       const eye = document.createElement('div');
@@ -1146,6 +1175,139 @@ const ed = {
       c.appendChild(wrapper);
     });
     document.getElementById('frameInfo').textContent = `${this.frameIdx + 1}/${frames.length}`;
+    this._updateMergeInfo();
+  },
+
+  // =====================================================================
+  // MULTI-SELECT + MERGE FRAMES
+  // =====================================================================
+  toggleMultiSelect(idx) {
+    const i = this.multiSelected.indexOf(idx);
+    if (i === -1) {
+      this.multiSelected.push(idx);
+    } else {
+      this.multiSelected.splice(i, 1);
+    }
+    this.buildFramesList();
+    const n = this.multiSelected.length;
+    if (n > 0) this.flash(`🟡 ${n} frame(s) selected — click 🟣 Merge to combine`);
+  },
+
+  clearMultiSelect() {
+    this.multiSelected = [];
+    this.buildFramesList();
+  },
+
+  mergeSelectedFrames() {
+    if (this.isPlaying) return;
+    const frames = this.project[this.direction][this.anim].frames;
+
+    if (this.multiSelected.length < 2) {
+      this.flash('⚠️ Shift+click at least 2 frames to merge');
+      return;
+    }
+
+    // Ordena os índices pra mesclar de cima pra baixo (primeiro por cima)
+    const sorted = [...this.multiSelected].sort((a, b) => a - b);
+
+    // Verifica se todos os índices existem
+    if (sorted.some(i => i < 0 || i >= frames.length)) {
+      this.flash('⚠️ Invalid selection');
+      this.multiSelected = [];
+      this.buildFramesList();
+      return;
+    }
+
+    if (!confirm(`Merge ${sorted.length} frames into one?
+All selected frames will be combined (top-first), and the originals removed.`)) {
+      return;
+    }
+
+    // Cria o frame mesclado (64x64 vazio)
+    const merged = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+
+    // Mescla ACUMULATIVA (último frame ganha):
+    //  - Itera do MAIOR índice pro MENOR (frame mais recente primeiro)
+    //  - Só escreve na célula se ela ainda estiver vazia
+    //  - Resultado:
+    //      • Todos os rabiscos do frame 2 (mais recente) ficam intactos
+    //      • O frame 1 preenche apenas os buracos onde o frame 2 não pintou
+    //      • Em conflito de posição, o frame de MAIOR índice ganha
+    const reversed = [...sorted].reverse();
+    for (const fi of reversed) {
+      const grid = frames[fi]._grid;
+      for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+          const c = grid[y][x];
+          if (!c) continue;                     // pixel vazio não interfere
+          if (merged[y][x] !== null) continue;  // já preenchido: mantém
+          merged[y][x] = c;
+        }
+      }
+    }
+
+    // Estatísticas de debug (vão pro console do navegador — F12)
+    try {
+      let totalFinal = 0;
+      for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+          if (merged[y][x]) totalFinal++;
+        }
+      }
+      const perFrame = sorted.map(fi => {
+        let n = 0;
+        for (let y = 0; y < SIZE; y++) {
+          for (let x = 0; x < SIZE; x++) {
+            if (frames[fi]._grid[y][x]) n++;
+          }
+        }
+        return `frame ${fi + 1}: ${n}px`;
+      });
+      console.log(`[Merge] ${perFrame.join(' · ')} → resultado: ${totalFinal}px`);
+    } catch (e) { /* ignora se algo falhar */ }
+
+    // Frame mesclado substitui o PRIMEIRO índice selecionado.
+    // Os outros são removidos.
+    const targetIdx = sorted[0];
+    frames[targetIdx] = {
+      _grid: merged,
+      _opacity: 1,
+      _visible: true,   // sempre visível (senão o usuário não vê o resultado)
+    };
+
+    // Remove os demais de baixo pra cima (pra não bagunçar índices)
+    for (let i = sorted.length - 1; i >= 1; i--) {
+      frames.splice(sorted[i], 1);
+    }
+
+    // Limpa multi-seleção e reajusta frame atual
+    this.multiSelected = [];
+    this.frameIdx = targetIdx;
+    if (this.frameIdx >= frames.length) this.frameIdx = frames.length - 1;
+
+    // Cancela seleção do Rect (ficou inválida)
+    if (this.selection || this.isSelecting || this.isFloatingMove) {
+      this.clearSelection();
+    }
+
+    this.buildFramesList();
+    this.updateOpacitySlider();
+    this.draw();
+    this.updateInfo();
+    this.flash(`✓ Merged ${sorted.length} frames into 1`);
+  },
+
+  _updateMergeInfo() {
+    const el = document.getElementById('mergeInfo');
+    if (!el) return;
+    const n = this.multiSelected.length;
+    if (n === 0) {
+      el.textContent = '';
+      el.title = '';
+    } else {
+      el.textContent = `🟡 ${n}`;
+      el.title = `${n} frame(s) marked — click 🟣 Merge to combine them into one`;
+    }
   },
 
   selectFrame(idx) {

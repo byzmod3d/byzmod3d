@@ -887,6 +887,10 @@ const ed = {
   playTimer: null,
   fps: 8,
 
+  // Undo history (Ctrl+Z)
+  undoStack: [],           // snapshot stack
+  undoMaxSize: 50,         // max states kept
+
   favorites: [],
 
   init() {
@@ -1391,6 +1395,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       this.flash('⚠️ Clipboard empty — copy a frame first');
       return;
     }
+    this.pushUndo('paste');
     const frame = this.currentFrame;
     // Cópia profunda de novo (pra poder colar várias vezes sem compartilhar)
     frame._grid = this.frameClipboard._grid.map(row => row.slice());
@@ -1468,6 +1473,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   // =====================================================================
   flipFrame(mode) {
     if (this.isPlaying) return;
+    this.pushUndo('flip ' + mode);
     const grid = this.currentFrame._grid;
     const N = SIZE;
 
@@ -1675,38 +1681,40 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       this.overlayCtx.restore();
     }
 
-    // Selection rect
+    // Selection rect — linha sólida fina visível
+    // Sem tracejado, sem preenchimento, sem glow. Apenas 1px liso.
     if (this.selection && this.selection.type === 'rect') {
       let rx = this.selection.rect.x;
       let ry = this.selection.rect.y;
       const w = this.selection.rect.w;
       const h = this.selection.rect.h;
       if (this.isFloatingMove) { rx += this.floatOffsetX; ry += this.floatOffsetY; }
-      this.overlayCtx.save();
-      this.overlayCtx.fillStyle = 'rgba(167, 139, 250, 0.15)';
-      this.overlayCtx.fillRect(rx, ry, w, h);
-      this.overlayCtx.strokeStyle = '#fff';
-      this.overlayCtx.lineWidth = 0.5;
-      this.overlayCtx.setLineDash([2, 2]);
-      this.overlayCtx.strokeRect(rx + 0.25, ry + 0.25, w, h);
-      this.overlayCtx.restore();
+      this._drawSolidRect(rx, ry, w, h, '#ffffff');
     }
 
-    // Selection preview (while dragging)
+    // Preview durante o arrasto — mesmo estilo
     if (this.isSelecting && this.selectStart && this.previewPt) {
       const x0 = Math.min(this.selectStart[0], this.previewPt[0]);
       const y0 = Math.min(this.selectStart[1], this.previewPt[1]);
       const w = Math.abs(this.previewPt[0] - this.selectStart[0]) + 1;
       const h = Math.abs(this.previewPt[1] - this.selectStart[1]) + 1;
-      this.overlayCtx.save();
-      this.overlayCtx.fillStyle = 'rgba(167, 139, 250, 0.2)';
-      this.overlayCtx.fillRect(x0, y0, w, h);
-      this.overlayCtx.strokeStyle = '#fff';
-      this.overlayCtx.setLineDash([2, 2]);
-      this.overlayCtx.lineWidth = 0.5;
-      this.overlayCtx.strokeRect(x0 + 0.25, y0 + 0.25, w, h);
-      this.overlayCtx.restore();
+      this._drawSolidRect(x0, y0, w, h, '#ffffff');
     }
+  },
+
+  // Retângulo de seleção: linha fina de verdade (0.5px do canvas)
+  // Truque: coordenadas em .5 fazem a linha ficar "no meio" do pixel,
+  // evitando que o navegador engrosse pra 1px cheio.
+  _drawSolidRect(x, y, w, h, color) {
+    const ctx = this.overlayCtx;
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.5;            // 0.5px do canvas = fino de verdade
+    ctx.setLineDash([]);
+    // Desenha em coordenadas .5 pra linha ficar centrada na borda do pixel
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    ctx.restore();
   },
 
   // =====================================================================
@@ -2084,6 +2092,39 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.drawOverlay();
   },
 
+  // Deletes the contents of the selected area (pixels become transparent).
+  // Keeps selection active after deleting (so you can keep painting inside).
+  deleteSelection() {
+    if (this.isPlaying) return;
+    if (!this.selection || this.selection.type !== 'rect') {
+      this.flash('No active selection — use Rect (M) first');
+      return;
+    }
+
+    // Snapshot BEFORE deleting (float will be committed below)
+    this.pushUndo('delete selection');
+
+    // If there's a floating move, commit it before deleting
+    if (this.isFloatingMove) this.commitFloatMove();
+
+    const { x, y, w, h } = this.selection.rect;
+    let apagados = 0;
+
+    for (let yy = y; yy < y + h; yy++) {
+      for (let xx = x; xx < x + w; xx++) {
+        if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        if (this.currentGrid[yy][xx] !== null) {
+          this.currentGrid[yy][xx] = null;
+          apagados++;
+        }
+      }
+    }
+
+    this.buildFramesList();
+    this.draw();
+    this.flash(`🗑️ ${apagados} pixel(s) deleted`);
+  },
+
   startFloatMove() {
     if (!this.selection || this.selection.type !== 'rect') return;
     const { x, y, w, h } = this.selection.rect;
@@ -2181,6 +2222,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
       // Right-click = erase (any tool)
       if (e.button === 2) {
+        this.pushUndo('erase');
         this.erasingRightClick = true;
         this.drawWithMirror(cx, cy, (px, py) => this.eraseAt(px, py));
         this.draw();
@@ -2198,6 +2240,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
       // TOOL: BUCKET
       if (this.tool === 'bucket') {
+        this.pushUndo('bucket');
         this.floodFill(cx, cy, false);
         this.draw();
         return;
@@ -2205,6 +2248,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
       // TOOL: WAND
       if (this.tool === 'wand') {
+        this.pushUndo('wand');
         this.magicWand(cx, cy);
         this.draw();
         return;
@@ -2217,6 +2261,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
           this.flash('Type text first');
           return;
         }
+        this.pushUndo('text');
         this.drawText(txt, cx, cy);
         this.draw();
         return;
@@ -2248,6 +2293,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       }
 
       // TOOL: BRUSH / ERASER
+      this.pushUndo('draw');
       this.isDrawing = true;
       this.lastX = cx;
       this.lastY = cy;
@@ -2377,6 +2423,20 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         this.clearSelection();
         return;
       }
+      // Delete / Backspace = erase contents of selection
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (this.selection || this.isSelecting) {
+          e.preventDefault();
+          this.deleteSelection();
+          return;
+        }
+      }
+      // Ctrl+Z = undo
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        this.undo();
+        return;
+      }
 
       const map = {
         'b': 'brush', 'e': 'eraser', 'g': 'bucket', 'w': 'wand',
@@ -2490,6 +2550,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   clearFrame() {
     if (this.isPlaying) return;
     if (!confirm('Clear current frame?')) return;
+    this.pushUndo('clear');
     this.currentFrame._grid = emptyGrid64();
     this.draw();
   },
@@ -2506,6 +2567,77 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.canvas.style.height = px + 'px';
     this.overlayCanvas.style.width = px + 'px';
     this.overlayCanvas.style.height = px + 'px';
+  },
+
+  // =====================================================================
+  // UNDO (Ctrl+Z)
+  // =====================================================================
+
+  // Takes a snapshot of the current frame and pushes it to the stack.
+  // Call BEFORE any action that modifies the frame.
+  pushUndo(label = '') {
+    const frame = this.currentFrame;
+    const snapshot = {
+      direction: this.direction,
+      anim: this.anim,
+      frameIdx: this.frameIdx,
+      // Deep copy of the grid
+      grid: frame._grid.map(row => row.slice()),
+      opacity: frame._opacity ?? 1,
+      visible: frame._visible,
+      label,
+      timestamp: Date.now(),
+    };
+    this.undoStack.push(snapshot);
+    if (this.undoStack.length > this.undoMaxSize) {
+      this.undoStack.shift();
+    }
+  },
+
+  // Restores the last snapshot from the stack
+  undo() {
+    if (this.isPlaying) return;
+    if (this.undoStack.length === 0) {
+      this.flash('Nothing to undo');
+      return;
+    }
+
+    const snap = this.undoStack.pop();
+
+    // Switch back to correct direction/anim/frame
+    const needsSwitch =
+      snap.direction !== this.direction ||
+      snap.anim !== this.anim ||
+      snap.frameIdx !== this.frameIdx;
+
+    this.direction = snap.direction;
+    this.anim = snap.anim;
+    this.frameIdx = snap.frameIdx;
+
+    // Restore the frame
+    const frame = this.currentFrame;
+    frame._grid = snap.grid.map(row => row.slice());
+    frame._opacity = snap.opacity;
+    frame._visible = snap.visible;
+
+    if (needsSwitch) {
+      // Update direction/anim buttons
+      document.querySelectorAll('.direction-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.dir === snap.direction);
+      });
+      document.querySelectorAll('.anim-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.anim === snap.anim);
+      });
+      this.buildFramesList();
+      this.updateOpacitySlider();
+    } else {
+      this.buildFramesList();
+      this.updateOpacitySlider();
+    }
+
+    this.draw();
+    this.updateInfo();
+    this.flash('↶ Undone' + (snap.label ? ' (' + snap.label + ')' : ''));
   },
 
   flash(msg) {

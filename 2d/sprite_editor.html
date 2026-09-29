@@ -373,6 +373,12 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
     <button onclick="ed.exportPNG()" class="action-btn green" style="width:auto;">
       <i class="fa-solid fa-image"></i> PNG
     </button>
+
+    <div class="w-px h-6 bg-[#3a3350] mx-1"></div>
+
+    <button onclick="ed.openImportModal()" class="action-btn amber" style="width:auto;" title="Capture image and convert to pixel art">
+      <i class="fa-solid fa-camera"></i> Capture
+    </button>
   </div>
 </header>
 
@@ -670,6 +676,154 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
 
   </aside>
 
+</div>
+
+<!-- ============ IMPORT & TRACE MODAL ============ -->
+<div id="importModal" class="fixed inset-0 z-[200] bg-[#0a0612]/98 backdrop-blur-md hidden items-center justify-center">
+  <div class="w-full h-full flex flex-col">
+
+    <!-- Import Header -->
+    <div class="bg-[#231d33] border-b border-[#3a3350] px-4 py-2 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-br from-amber-500 to-orange-600 text-white p-1.5 rounded-lg w-9 h-9 flex items-center justify-center">
+          <i class="fa-solid fa-image"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-sm text-slate-100">Capture & Trace — Character Studio</h1>
+          <p class="text-[10px] text-slate-400">Load image • Paint over • Capture to 2D frame</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="ed.closeImportModal()" class="action-btn" style="width:auto;background:#3a3350;">
+          <i class="fa-solid fa-arrow-left"></i> Back to 2D
+        </button>
+        <button onclick="ed.captureImportTo2D()" class="action-btn green" style="width:auto;">
+          <i class="fa-solid fa-camera"></i> Capture → 2D
+        </button>
+      </div>
+    </div>
+
+    <!-- Import Workspace -->
+    <div class="flex-1 flex overflow-hidden">
+
+      <!-- Left: Tools -->
+      <aside class="w-64 bg-[#231d33]/95 border-r border-[#3a3350] p-3 flex flex-col gap-3 overflow-y-auto scroll-thin">
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Image</div>
+          <label class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg cursor-pointer text-xs font-bold flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-upload"></i> Load Image
+            <input type="file" id="importImgInput" accept="image/*" class="hidden" onchange="imp.loadImage(event)">
+          </label>
+          <button onclick="imp.clearAll()" class="w-full mt-1.5 py-1.5 bg-[#3a3350] hover:bg-[#4c4463] border border-[#4c4463] rounded text-[10px] font-semibold text-rose-300 transition">
+            <i class="fa-solid fa-trash-can"></i> Clear All
+          </button>
+        </div>
+
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Tools</div>
+          <div class="grid grid-cols-2 gap-1">
+            <button onclick="imp.setTool('brush')" id="imp-tool-brush" class="vx-tool-btn active">
+              <i class="fa-solid fa-paintbrush"></i><span>Brush</span>
+            </button>
+            <button onclick="imp.setTool('eraser')" id="imp-tool-eraser" class="vx-tool-btn">
+              <i class="fa-solid fa-eraser"></i><span>Eraser</span>
+            </button>
+            <button onclick="imp.setTool('bucket')" id="imp-tool-bucket" class="vx-tool-btn">
+              <i class="fa-solid fa-fill-drip"></i><span>Bucket</span>
+            </button>
+            <button onclick="imp.setTool('picker')" id="imp-tool-picker" class="vx-tool-btn">
+              <i class="fa-solid fa-eye-dropper"></i><span>Picker</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350] space-y-2">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Image Opacity</div>
+          <input type="range" id="imp-opacity" min="0" max="100" value="100" oninput="imp.setImageOpacity(this.value)" class="w-full">
+          <div class="flex justify-between text-[10px] text-slate-400">
+            <span>Background</span>
+            <span id="imp-opacity-val" class="font-mono text-amber-300">100%</span>
+          </div>
+        </div>
+
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350] space-y-2">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Brush Size</div>
+          <input type="range" id="imp-brush-size" min="1" max="8" value="1" oninput="imp.setBrushSize(this.value)" class="w-full">
+          <div class="text-center text-[10px] font-mono text-amber-300">
+            <span id="imp-brush-size-val">1px</span>
+          </div>
+        </div>
+
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Active Color</div>
+          <div class="flex items-center gap-2">
+            <div id="imp-active-color-preview" class="w-8 h-8 rounded border border-white/20" style="background:#ff004d;"></div>
+            <input type="color" id="imp-color-picker" value="#ff004d" onchange="imp.setActiveColor(this.value)" class="flex-1 h-8 rounded cursor-pointer border border-[#3a3350] bg-transparent">
+          </div>
+        </div>
+
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350] flex-1 min-h-[140px] flex flex-col">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Palette</div>
+          <div id="imp-palette" class="grid grid-cols-4 gap-1 overflow-y-auto scroll-thin"></div>
+        </div>
+      </aside>
+
+      <!-- Center: Canvas -->
+      <main class="flex-1 bg-[#0a0612] relative overflow-hidden">
+        <div id="imp-canvas-container" class="w-full h-full relative overflow-hidden cursor-crosshair">
+          <canvas id="imp-canvas" width="1024" height="1024" style="position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;"></canvas>
+        </div>
+
+        <div class="absolute top-4 left-4 bg-[#231d33]/80 backdrop-blur border border-[#3a3350] rounded-lg px-3 py-1.5 text-[10px] text-slate-400 pointer-events-none">
+          <span class="font-mono text-amber-300" id="imp-status">No image loaded • Click "Load Image"</span>
+        </div>
+
+        <div class="absolute top-4 right-4 bg-amber-500/15 backdrop-blur border border-amber-500/50 rounded-lg px-3 py-1.5 text-[10px] text-amber-200 pointer-events-none flex items-center gap-2">
+          <i class="fa-solid fa-crop-simple"></i>
+          <span>Only what's inside the <strong class="text-amber-100">square frame</strong> becomes your sprite</span>
+        </div>
+
+        <div class="absolute bottom-4 left-4 bg-[#231d33]/80 backdrop-blur border border-[#3a3350] rounded-lg px-3 py-1.5 text-[10px] text-slate-400 pointer-events-none">
+          <span class="font-mono text-amber-300" id="imp-cursor-pos">x: -, y: -</span>
+        </div>
+      </main>
+
+      <!-- Right: Zoom/pan info -->
+      <aside class="w-56 bg-[#231d33]/95 border-l border-[#3a3350] p-3 flex flex-col gap-3 overflow-y-auto scroll-thin">
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Zoom</div>
+          <div class="flex items-center gap-1">
+            <button onclick="imp.zoomOut()" class="w-7 h-7 bg-[#3a3350] hover:bg-[#4c4463] border border-[#4c4463] rounded text-slate-200 text-xs font-bold transition">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+            <div class="flex-1 text-center font-mono text-amber-300 text-[11px]" id="imp-zoom-val">1.00x</div>
+            <button onclick="imp.zoomIn()" class="w-7 h-7 bg-[#3a3350] hover:bg-[#4c4463] border border-[#4c4463] rounded text-slate-200 text-xs font-bold transition">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+          <button onclick="imp.resetView()" class="w-full mt-1.5 py-1.5 bg-[#3a3350] hover:bg-[#4c4463] border border-[#4c4463] rounded text-[10px] font-semibold text-slate-200 transition">
+            <i class="fa-solid fa-compress"></i> Reset View
+          </button>
+          <p class="text-[9px] text-slate-500 mt-1.5 text-center leading-tight">
+            Wheel: zoom • Right drag: pan
+          </p>
+        </div>
+
+        <div class="bg-amber-500/10 p-2 rounded-lg border border-amber-500/30">
+          <div class="text-[10px] font-bold text-amber-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-crop-simple"></i> Capture Frame
+          </div>
+          <p class="text-[10px] text-slate-300 leading-tight">
+            The <strong class="text-amber-200">amber frame</strong> shows exactly what becomes your sprite. Everything inside it is captured as a <strong class="text-amber-200">64×64</strong> sprite.
+          </p>
+          <p class="text-[10px] text-slate-400 leading-tight mt-1.5">
+            Adjust <strong class="text-amber-200">zoom</strong> and <strong class="text-amber-200">pan</strong> to position the image, then press <kbd class="bg-[#3a3350] px-1 rounded text-[9px]">F12</kbd> to capture.
+          </p>
+        </div>
+      </aside>
+
+    </div>
+  </div>
 </div>
 
 <script>
@@ -3478,6 +3632,730 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     document.body.appendChild(t);
     setTimeout(() => { t.style.opacity='0'; t.style.transition='0.4s'; setTimeout(() => t.remove(), 400); }, 1500);
   },
+};
+
+// =========================================================================
+// CAPTURE & TRACE MODULE
+// =========================================================================
+
+const imp = {
+  initialized: false,
+  canvas: null,
+  ctx: null,
+  container: null,
+
+  // Image state
+  image: null,
+  imgOpacity: 1.0,
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+
+  // Painting grid (64x64)
+  grid: null,
+  gridSize: 64,
+
+  // Tools
+  tool: 'brush',
+  activeColor: '#ff004d',
+  brushSize: 1,
+
+  // Mouse
+  isDrawing: false,
+  isPanning: false,
+  lastX: 0,
+  lastY: 0,
+  panStartX: 0,
+  panStartY: 0,
+
+  init() {
+    if (this.initialized) return;
+    this.initialized = true;
+
+    this.canvas = document.getElementById('imp-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.ctx.imageSmoothingEnabled = false;
+    this.container = document.getElementById('imp-canvas-container');
+
+    // Grid 64x64 vazia
+    this.grid = Array.from({ length: 64 }, () => Array(64).fill(null));
+
+    // Ajustar canvas ao container
+    this.resizeCanvas();
+    window.addEventListener('resize', () => this.resizeCanvas());
+
+    this.renderPalette();
+    this.bindEvents();
+    this.redraw();
+  },
+
+  resizeCanvas() {
+    if (!this.container) return;
+    const w = this.container.clientWidth;
+    const h = this.container.clientHeight;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.canvas.style.width = w + 'px';
+    this.canvas.style.height = h + 'px';
+    this.ctx.imageSmoothingEnabled = false;
+    this.redraw();
+  },
+
+  loadImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        this.image = img;
+        this.resetView();
+        document.getElementById('imp-status').textContent = `Loaded: ${file.name} (${img.width}×${img.height})`;
+        this.redraw();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  },
+
+  // Apaga TUDO: imagem + pintura + reseta view
+  clearAll() {
+    if (!confirm('Clear everything? (image + painting)')) return;
+    this.image = null;
+    this.grid = Array.from({ length: 64 }, () => Array(64).fill(null));
+    this.zoom = 1;
+    this.panX = 0;
+    this.panY = 0;
+    document.getElementById('imp-status').textContent = 'No image loaded • Click "Load Image"';
+    this.updateZoomLabel();
+    this.redraw();
+  },
+
+  // Zoom in (botão +)
+  zoomIn() {
+    const factor = 1.25;
+    this.zoom = Math.min(20, this.zoom * factor);
+    this.updateZoomLabel();
+    this.redraw();
+  },
+
+  // Zoom out (botão -)
+  zoomOut() {
+    const factor = 0.8;
+    this.zoom = Math.max(0.1, this.zoom * factor);
+    this.updateZoomLabel();
+    this.redraw();
+  },
+
+  // Mantido por compatibilidade (não é mais chamado pela UI)
+  clearImage() {
+    this.image = null;
+    document.getElementById('imp-status').textContent = 'No image loaded • Click "Load Image"';
+    this.redraw();
+  },
+
+  resetView() {
+    if (!this.image) {
+      this.zoom = 1;
+      this.panX = 0;
+      this.panY = 0;
+    } else {
+      const W = this.canvas.width;
+      const H = this.canvas.height;
+      const iw = this.image.width;
+      const ih = this.image.height;
+
+      // CALCULA O QUADRADO CENTRAL (mesma moldura do redraw/capture)
+      const frameSize = Math.min(W, H);
+      const frameX = (W - frameSize) / 2;
+      const frameY = (H - frameSize) / 2;
+
+      // COVER dentro do quadrado central: preenche TODO o quadrado
+      const scale = Math.max(frameSize / iw, frameSize / ih);
+      this.zoom = scale;
+
+      // Centraliza a imagem no quadrado (não no canvas todo)
+      this.panX = frameX + (frameSize - iw * scale) / 2;
+      this.panY = frameY + (frameSize - ih * scale) / 2;
+    }
+    this.updateZoomLabel();
+    this.redraw();
+  },
+
+  updateZoomLabel() {
+    const el = document.getElementById('imp-zoom-val');
+    if (el) el.textContent = this.zoom.toFixed(2) + 'x';
+  },
+
+  setImageOpacity(val) {
+    this.imgOpacity = parseInt(val) / 100;
+    document.getElementById('imp-opacity-val').textContent = val + '%';
+    this.redraw();
+  },
+
+  setBrushSize(val) {
+    this.brushSize = parseInt(val);
+    document.getElementById('imp-brush-size-val').textContent = this.brushSize + 'px';
+  },
+
+  setTool(t) {
+    this.tool = t;
+    ['brush', 'eraser', 'bucket', 'picker'].forEach(name => {
+      const btn = document.getElementById(`imp-tool-${name}`);
+      if (btn) btn.classList.toggle('active', name === t);
+    });
+  },
+
+  setActiveColor(hex) {
+    this.activeColor = hex;
+    const p = document.getElementById('imp-active-color-preview');
+    if (p) p.style.background = hex;
+    const i = document.getElementById('imp-color-picker');
+    if (i) i.value = hex;
+  },
+
+  renderPalette() {
+    const c = document.getElementById('imp-palette');
+    if (!c) return;
+    c.innerHTML = '';
+    // Paleta PICO-8 embutida (não depende mais de IMP_PALETTE global)
+    const paletteColors = [
+      '#000000','#1D2B53','#7E2553','#008751',
+      '#AB5236','#5F574F','#C2C3C7','#FFF1E8',
+      '#FF004D','#FFA300','#FFEC27','#00E436',
+      '#29ADFF','#83769C','#FF77A8','#FFCCAA'
+    ];
+    paletteColors.forEach(color => {
+      const el = document.createElement('div');
+      el.className = 'palette-swatch';
+      el.style.background = color;
+      el.title = color;
+      el.onclick = () => this.setActiveColor(color);
+      c.appendChild(el);
+    });
+  },
+
+  bindEvents() {
+    const canvas = this.canvas;
+
+    canvas.addEventListener('mousedown', (e) => this.onDown(e));
+    canvas.addEventListener('mousemove', (e) => this.onMove(e));
+    canvas.addEventListener('mouseup', () => this.onUp());
+    canvas.addEventListener('mouseleave', () => this.onUp());
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
+
+    // Keyboard shortcuts (blender-style, funciona só quando modal aberto)
+    document.addEventListener('keydown', (e) => {
+      const modal = document.getElementById('importModal');
+      if (!modal || modal.classList.contains('hidden')) return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.code === 'F12') { e.preventDefault(); ed.captureImportTo2D(); return; }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        ed.closeImportModal();
+        return;
+      }
+      if (e.key === '1') { this.setTool('brush'); return; }
+      if (e.key === '2') { this.setTool('eraser'); return; }
+      if (e.key === '3') { this.setTool('bucket'); return; }
+      if (e.key === '4') { this.setTool('picker'); return; }
+    });
+  },
+
+  // Converte coordenada do mouse (clientX/Y) pra coordenada do canvas
+  getCanvasPos(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  },
+
+  // Converte posição no canvas pra posição na grid 64x64
+  canvasToGrid(cx, cy) {
+    // O que a "grade 64x64" representa é a área visível do canvas
+    // Dividida em 64x64 células
+    const cellW = this.canvas.width / this.gridSize;
+    const cellH = this.canvas.height / this.gridSize;
+    return {
+      gx: Math.floor(cx / cellW),
+      gy: Math.floor(cy / cellH)
+    };
+  },
+
+  onDown(e) {
+    e.preventDefault();
+    const pos = this.getCanvasPos(e);
+
+    // Middle mouse ou botão direito = pan
+    if (e.button === 1 || e.button === 2) {
+      this.isPanning = true;
+      this.panStartX = pos.x - this.panX;
+      this.panStartY = pos.y - this.panY;
+      this.canvas.style.cursor = 'grabbing';
+      return;
+    }
+
+    if (e.button !== 0) return;
+
+    const { gx, gy } = this.canvasToGrid(pos.x, pos.y);
+    if (gx < 0 || gx >= 64 || gy < 0 || gy >= 64) return;
+
+    if (this.tool === 'picker') {
+      // Pega a cor do pixel pintado (não da imagem)
+      const c = this.grid[gy][gx];
+      if (c) this.setActiveColor(c);
+      else if (this.image) {
+        // Se não tem pintura, pega da imagem
+        this.pickFromImage(pos.x, pos.y);
+      }
+      return;
+    }
+
+    this.isDrawing = true;
+    this.lastX = gx;
+    this.lastY = gy;
+    this.paintAt(gx, gy);
+  },
+
+  onMove(e) {
+    const pos = this.getCanvasPos(e);
+
+    // Atualiza cursor info
+    const { gx, gy } = this.canvasToGrid(pos.x, pos.y);
+    document.getElementById('imp-cursor-pos').textContent = `x: ${gx}, y: ${gy}`;
+
+    if (this.isPanning) {
+      this.panX = pos.x - this.panStartX;
+      this.panY = pos.y - this.panStartY;
+      this.redraw();
+      return;
+    }
+
+    if (this.isDrawing && (this.tool === 'brush' || this.tool === 'eraser')) {
+      if (gx < 0 || gx >= 64 || gy < 0 || gy >= 64) return;
+      this.lineTo(this.lastX, this.lastY, gx, gy);
+      this.lastX = gx;
+      this.lastY = gy;
+    }
+  },
+
+  onUp() {
+    this.isDrawing = false;
+    this.isPanning = false;
+    this.canvas.style.cursor = 'crosshair';
+  },
+
+  onWheel(e) {
+    e.preventDefault();
+    const pos = this.getCanvasPos(e);
+    const oldZoom = this.zoom;
+    // Fator mais suave (1.15 em vez de 1.1) pra dar sensação de fluidez
+    const factor = e.deltaY > 0 ? (1/1.15) : 1.15;
+    this.zoom = Math.max(0.1, Math.min(20, this.zoom * factor));
+
+    // Zoom centrado no cursor (o ponto sob o mouse fica parado)
+    const dx = pos.x - this.panX;
+    const dy = pos.y - this.panY;
+    this.panX -= dx * (this.zoom / oldZoom - 1);
+    this.panY -= dy * (this.zoom / oldZoom - 1);
+
+    this.updateZoomLabel();
+    this.redraw();
+  },
+
+  paintAt(gx, gy) {
+    if (gx < 0 || gx >= 64 || gy < 0 || gy >= 64) return;
+
+    if (this.tool === 'eraser') {
+      this.grid[gy][gx] = null;
+    } else if (this.tool === 'bucket') {
+      this.floodFill(gx, gy);
+    } else {
+      // Brush
+      const half = Math.floor(this.brushSize / 2);
+      for (let dy = -half; dy < this.brushSize - half; dy++) {
+        for (let dx = -half; dx < this.brushSize - half; dx++) {
+          const nx = gx + dx, ny = gy + dy;
+          if (nx < 0 || nx >= 64 || ny < 0 || ny >= 64) continue;
+          this.grid[ny][nx] = this.activeColor;
+        }
+      }
+    }
+    this.redraw();
+  },
+
+  floodFill(sx, sy) {
+    const target = this.grid[sy][sx];
+    const fill = this.activeColor;
+    if (target === fill) return;
+
+    const stack = [[sx, sy]];
+    const visited = new Set();
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= 64 || y < 0 || y >= 64) continue;
+      const k = y * 64 + x;
+      if (visited.has(k)) continue;
+      visited.add(k);
+      if (this.grid[y][x] !== target) continue;
+      this.grid[y][x] = fill;
+      stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+    }
+  },
+
+  lineTo(x0, y0, x1, y1) {
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    while (true) {
+      this.paintAt(x0, y0);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx) { err += dx; y0 += sy; }
+    }
+  },
+
+  pickFromImage(cx, cy) {
+    // Lê o pixel da imagem renderizada no canvas
+    const pixel = this.ctx.getImageData(cx, cy, 1, 1).data;
+    if (pixel[3] < 10) return;
+    const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+    this.setActiveColor(hex);
+  },
+
+  // Mantido por compatibilidade (não é mais chamado pela UI)
+  clearPaint() {
+    if (!confirm('Clear all painting? (image stays)')) return;
+    this.grid = Array.from({ length: 64 }, () => Array(64).fill(null));
+    this.redraw();
+  },
+
+  // Redesenha tudo (imagem + pintura)
+  redraw() {
+    if (!this.ctx) return;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+
+    // Limpa
+    this.ctx.clearRect(0, 0, W, H);
+
+    // Fundo xadrez (transparência)
+    this.drawCheckerboard();
+
+    // Desenha imagem de referência (mesmo esquema do capture)
+    if (this.image) {
+      this.ctx.globalAlpha = this.imgOpacity;
+      this.ctx.imageSmoothingEnabled = false;
+      this.ctx.drawImage(
+        this.image,
+        this.panX, this.panY,
+        this.image.width * this.zoom,
+        this.image.height * this.zoom
+      );
+      this.ctx.globalAlpha = 1;
+    }
+
+    // Desenha a pintura (grid 64x64 esticada pra viewport)
+    const cellW = W / 64;
+    const cellH = H / 64;
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 64; x++) {
+        const c = this.grid[y][x];
+        if (!c) continue;
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(x * cellW, y * cellH, cellW, cellH);
+      }
+    }
+
+    // ========================================================
+    // MOLDURA DE CAPTURA — quadrado 64×64 no centro do canvas
+    // Igual ao canvas 2D principal (só que maior)
+    // O que está FORA da moldura fica escurecido (não conta)
+    // ========================================================
+
+    // Calcula o quadrado centralizado, mantendo-o QUADRADO
+    // (não estica em telas widescreen)
+    const frameSize = Math.min(W, H);
+    const frameX = (W - frameSize) / 2;
+    const frameY = (H - frameSize) / 2;
+
+    // 1) Escurece TUDO FORA da moldura 64x64
+    this.ctx.save();
+    this.ctx.fillStyle = 'rgba(10, 6, 18, 0.72)';
+    // Topo
+    this.ctx.fillRect(0, 0, W, frameY);
+    // Baixo
+    this.ctx.fillRect(0, frameY + frameSize, W, H - frameY - frameSize);
+    // Esquerda
+    this.ctx.fillRect(0, frameY, frameX, frameSize);
+    // Direita
+    this.ctx.fillRect(frameX + frameSize, frameY, W - frameX - frameSize, frameSize);
+    this.ctx.restore();
+
+    // 2) Grade fina DENTRO da moldura (a cada 8 células do sprite)
+    const innerCellW = frameSize / 64;
+    const innerCellH = frameSize / 64;
+
+    this.ctx.save();
+    this.ctx.strokeStyle = 'rgba(167, 139, 250, 0.35)';
+    this.ctx.lineWidth = 1;
+    for (let i = 0; i <= 64; i += 8) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(frameX + Math.round(i * innerCellW) + 0.5, frameY);
+      this.ctx.lineTo(frameX + Math.round(i * innerCellW) + 0.5, frameY + frameSize);
+      this.ctx.stroke();
+      this.ctx.beginPath();
+      this.ctx.moveTo(frameX, frameY + Math.round(i * innerCellH) + 0.5);
+      this.ctx.lineTo(frameX + frameSize, frameY + Math.round(i * innerCellH) + 0.5);
+      this.ctx.stroke();
+    }
+
+    // Grade ultra-fina (só com zoom alto — >= 8px por célula do sprite)
+    if (innerCellW >= 8) {
+      this.ctx.strokeStyle = 'rgba(167, 139, 250, 0.12)';
+      for (let i = 0; i <= 64; i++) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(frameX + Math.round(i * innerCellW) + 0.5, frameY);
+        this.ctx.lineTo(frameX + Math.round(i * innerCellW) + 0.5, frameY + frameSize);
+        this.ctx.stroke();
+        this.ctx.beginPath();
+        this.ctx.moveTo(frameX, frameY + Math.round(i * innerCellH) + 0.5);
+        this.ctx.lineTo(frameX + frameSize, frameY + Math.round(i * innerCellH) + 0.5);
+        this.ctx.stroke();
+      }
+    }
+    this.ctx.restore();
+
+    // 3) MOLDURA âmbar ao redor do quadrado 64x64
+    this.ctx.save();
+    this.ctx.strokeStyle = '#fbbf24';
+    this.ctx.lineWidth = 2;
+    this.ctx.setLineDash([]);
+    this.ctx.strokeRect(frameX + 0.5, frameY + 0.5, frameSize - 1, frameSize - 1);
+    this.ctx.restore();
+
+    // 4) Cantos marcados (crop marks) — traços curtos e grossos
+    this.ctx.save();
+    this.ctx.strokeStyle = '#fbbf24';
+    this.ctx.lineWidth = 4;
+    this.ctx.setLineDash([]);
+    const cornerLen = Math.min(24, frameSize * 0.06);
+
+    // Superior-esquerdo
+    this.ctx.beginPath();
+    this.ctx.moveTo(frameX, frameY + cornerLen);
+    this.ctx.lineTo(frameX, frameY);
+    this.ctx.lineTo(frameX + cornerLen, frameY);
+    this.ctx.stroke();
+
+    // Superior-direito
+    this.ctx.beginPath();
+    this.ctx.moveTo(frameX + frameSize - cornerLen, frameY);
+    this.ctx.lineTo(frameX + frameSize, frameY);
+    this.ctx.lineTo(frameX + frameSize, frameY + cornerLen);
+    this.ctx.stroke();
+
+    // Inferior-esquerdo
+    this.ctx.beginPath();
+    this.ctx.moveTo(frameX, frameY + frameSize - cornerLen);
+    this.ctx.lineTo(frameX, frameY + frameSize);
+    this.ctx.lineTo(frameX + cornerLen, frameY + frameSize);
+    this.ctx.stroke();
+
+    // Inferior-direito
+    this.ctx.beginPath();
+    this.ctx.moveTo(frameX + frameSize - cornerLen, frameY + frameSize);
+    this.ctx.lineTo(frameX + frameSize, frameY + frameSize);
+    this.ctx.lineTo(frameX + frameSize, frameY + frameSize - cornerLen);
+    this.ctx.stroke();
+    this.ctx.restore();
+  },
+
+  drawCheckerboard() {
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const s = 16;
+    this.ctx.fillStyle = '#1a1625';
+    this.ctx.fillRect(0, 0, W, H);
+    this.ctx.fillStyle = '#2a2438';
+    for (let y = 0; y < H; y += s) {
+      for (let x = 0; x < W; x += s) {
+        if (((x / s) + (y / s)) % 2 === 0) {
+          this.ctx.fillRect(x, y, s, s);
+        }
+      }
+    }
+  }
+};
+
+ed.openImportModal = function() {
+  const m = document.getElementById('importModal');
+  if (!m) return;
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+  setTimeout(() => {
+    if (!imp.initialized) {
+      imp.init();
+    } else {
+      imp.resizeCanvas();
+    }
+  }, 50);
+};
+
+ed.closeImportModal = function() {
+  const m = document.getElementById('importModal');
+  if (!m) return;
+  m.classList.add('hidden');
+  m.classList.remove('flex');
+};
+
+ed.captureImportTo2D = function() {
+  if (!imp.initialized) {
+    alert('Import editor not ready');
+    return;
+  }
+  try {
+    const tmp = document.createElement('canvas');
+    tmp.width = 64;
+    tmp.height = 64;
+    const tctx = tmp.getContext('2d');
+    tctx.imageSmoothingEnabled = false;
+
+    const W = imp.canvas.width;
+    const H = imp.canvas.height;
+
+    // == CALCULA A MESMA MOLDURA QUADRADA DO REDRAW ==
+    // O capture usa EXATAMENTE o quadrado central mostrado na moldura
+    const frameSize = Math.min(W, H);
+    const frameX = (W - frameSize) / 2;
+    const frameY = (H - frameSize) / 2;
+
+    // Escala do frame (frameSize) → 64 pixels do sprite
+    const frameToSprite = 64 / frameSize;
+
+    // 1) Desenha a IMAGEM limitando ao quadrado central da moldura
+    if (imp.image) {
+      tctx.save();
+      // Clip no quadrado 64×64 do destino (garante que nada "vaza")
+      tctx.beginPath();
+      tctx.rect(0, 0, 64, 64);
+      tctx.clip();
+
+      tctx.globalAlpha = imp.imgOpacity;
+      tctx.imageSmoothingEnabled = false;
+
+      // Posição da imagem RELATIVA ao início da moldura (frameX, frameY)
+      const relX = imp.panX - frameX;
+      const relY = imp.panY - frameY;
+      const imgW = imp.image.width * imp.zoom;
+      const imgH = imp.image.height * imp.zoom;
+
+      // Converte pra coordenadas do sprite 64×64
+      const spriteX = relX * frameToSprite;
+      const spriteY = relY * frameToSprite;
+      const spriteW = imgW * frameToSprite;
+      const spriteH = imgH * frameToSprite;
+
+      tctx.drawImage(imp.image, spriteX, spriteY, spriteW, spriteH);
+      tctx.restore();
+    }
+
+    // 2) Desenha a PINTURA do usuário por cima (também limitada à moldura)
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 64; x++) {
+        const c = imp.grid[y][x];
+        if (!c) continue;
+        tctx.fillStyle = c;
+        tctx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    // 3) Lê os pixels do resultado
+    const imgData = tctx.getImageData(0, 0, 64, 64).data;
+
+    // 4) Constrói a nova grid 64×64
+    const newGrid = Array.from({ length: 64 }, () => Array(64).fill(null));
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 64; x++) {
+        const i = (y * 64 + x) * 4;
+        const r = imgData[i];
+        const g = imgData[i + 1];
+        const b = imgData[i + 2];
+        const a = imgData[i + 3];
+
+        if (a < 30) continue;   // pixel transparente
+
+        newGrid[y][x] = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+      }
+    }
+
+    // 5) Aplica no frame atual
+    this.pushUndo('capture');
+    this.currentFrame._grid = newGrid;
+    this.currentFrame._visible = true;
+    this.buildFramesList();
+    this.draw();
+    this.closeImportModal();
+    this.flash('📷 Captured → 2D');
+  } catch (e) {
+    console.error(e);
+    alert('Capture failed: ' + e.message);
+  }
+};
+
+ed.open3DModal = function() {
+  const m = document.getElementById('voxel3dModal');
+  if (!m) return;
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+  // Inicializa o 3D depois que o modal está visível (pra medir container)
+  setTimeout(() => {
+    if (!vx.initialized) vx.init();
+    else {
+      // Reajusta o renderer se a janela mudou
+      const c = document.getElementById('vx-canvas-container');
+      if (c) {
+        vx.camera.aspect = c.clientWidth / c.clientHeight;
+        vx.camera.updateProjectionMatrix();
+        vx.renderer.setSize(c.clientWidth, c.clientHeight);
+      }
+    }
+  }, 50);
+};
+
+ed.close3DModal = function() {
+  const m = document.getElementById('voxel3dModal');
+  if (!m) return;
+  m.classList.add('hidden');
+  m.classList.remove('flex');
+};
+
+ed.captureVoxelTo2D = function() {
+  if (!vx.initialized) {
+    alert('3D editor not ready yet');
+    return;
+  }
+  try {
+    const grid = vx.capture();
+    // Aplica no frame atual
+    this.pushUndo('3D capture');
+    this.currentFrame._grid = grid;
+    this.currentFrame._visible = true;
+    this.buildFramesList();
+    this.draw();
+    this.close3DModal();
+    this.flash('📷 Captured from 3D → 2D');
+  } catch (e) {
+    console.error(e);
+    alert('Capture failed: ' + e.message);
+  }
 };
 
 window.addEventListener('load', () => ed.init());

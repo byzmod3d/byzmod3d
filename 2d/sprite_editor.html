@@ -894,6 +894,22 @@ const ed = {
   // Rect copy/paste (Ctrl+C / Ctrl+V)
   rectClipboard: null,     // { grid, w, h } — área copiada
 
+  // Rect rotate mode (aperta R)
+  rotateMode: false,       // se está em modo rotate
+  rotateBuffer: null,      // { grid, w, h } — área original
+  rotateAngle: 0,          // 0, 90, 180, 270
+  rotateRect: null,        // { x, y, w, h } — retângulo original
+  rotateStartMouse: null,  // { x, y } — posição inicial do mouse ao entrar no modo
+  rotateBackground: null,  // grid SEM a seleção (preserva o que está em volta)
+
+  // Grab mode (aperta G depois de escolher o ângulo)
+  grabMode: false,         // se está em modo move
+  grabStartX: 0,           // posição inicial do mouse ao entrar no grab
+  grabStartY: 0,
+  grabOffsetX: 0,          // deslocamento atual em pixels
+  grabOffsetY: 0,
+  grabRotatedGrid: null,   // grid rotacionada (base do move)
+
   favorites: [],
 
   init() {
@@ -2198,6 +2214,399 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.flash(`📋 Pasted ${colados} pixel(s) at (${destX}, ${destY})`);
   },
 
+  // =====================================================================
+  // ROTATE MODE (R na seleção)
+  // =====================================================================
+
+  // Entra em modo rotate: copia a seleção pra um buffer e espera o mouse.
+  enterRotateMode() {
+    if (this.isPlaying) return;
+    if (!this.selection || this.selection.type !== 'rect') {
+      this.flash('No active selection — use Rect (M) first');
+      return;
+    }
+    if (this.rotateMode) {
+      this.flash('Already in rotate mode');
+      return;
+    }
+
+    const { x, y, w, h } = this.selection.rect;
+
+    // Copia a área selecionada pra um buffer (pixels originais)
+    const buf = Array.from({ length: h }, () => Array(w).fill(null));
+    for (let yy = 0; yy < h; yy++) {
+      for (let xx = 0; xx < w; xx++) {
+        const sx = x + xx, sy = y + yy;
+        if (sx < 0 || sx >= SIZE || sy < 0 || sy >= SIZE) continue;
+        buf[yy][xx] = this.currentGrid[sy][sx];
+      }
+    }
+
+    // Snapshot pra poder desfazer depois
+    this.pushUndo('rotate');
+
+    // Salva estado
+    this.rotateMode = true;
+    this.rotateBuffer = { grid: buf, w, h };
+    this.rotateRect = { x, y, w, h };
+    this.rotateAngle = 0;   // começa em 0° (sem rotação)
+    this.rotateStartMouse = null;
+
+    // EIXO FIXO: centro do CONTEÚDO (bounding box dos pixels não-transparentes).
+    // Se o desenho é pequeno num canto da seleção, o eixo vai pro centro do
+    // desenho (não fica num ponto vazio). Assim o eixo SEMPRE fica dentro do
+    // desenho — nunca fora.
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let yy = 0; yy < h; yy++) {
+      for (let xx = 0; xx < w; xx++) {
+        if (buf[yy][xx] !== null) {
+          if (xx < minX) minX = xx;
+          if (xx > maxX) maxX = xx;
+          if (yy < minY) minY = yy;
+          if (yy > maxY) maxY = yy;
+        }
+      }
+    }
+
+    let axisLocalX, axisLocalY;
+    if (minX === Infinity) {
+      // Buffer vazio — cai pro centro da caixa
+      axisLocalX = w / 2;
+      axisLocalY = h / 2;
+    } else {
+      // Centro do conteúdo (bounding box dos pixels)
+      axisLocalX = (minX + maxX + 1) / 2;
+      axisLocalY = (minY + maxY + 1) / 2;
+    }
+
+    // Eixo no canvas (posição absoluta)
+    this.rotateAxisX = x + axisLocalX;
+    this.rotateAxisY = y + axisLocalY;
+
+    // Também guarda a posição local do eixo dentro do buffer
+    this.rotateAxisLocalX = axisLocalX;
+    this.rotateAxisLocalY = axisLocalY;
+
+    // Salva uma CÓPIA do canvas SEM a área selecionada.
+    // Isso é o "fundo" que fica intacto durante a rotação.
+    // A cada frame da rotação, restauramos esse fundo e desenhamos
+    // o rotacionado por cima — assim nada fora da seleção é apagado.
+    const background = this.currentGrid.map(row => row.slice());
+
+    // Remove a área selecionada do background (vai ser redesenhada rotacionada)
+    for (let yy = y; yy < y + h; yy++) {
+      for (let xx = x; xx < x + w; xx++) {
+        if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        background[yy][xx] = null;
+      }
+    }
+
+    this.rotateBackground = background;
+
+    this.draw();
+    this.flash('🔄 Rotate mode — move mouse to rotate • Left click = apply • Right click = cancel');
+  },
+
+  // Atualiza a rotação baseado no ângulo do mouse em relação ao
+  // EIXO FIXO (centro da seleção original). O eixo não muda durante
+  // a rotação — é o ponto em torno do qual tudo gira, tipo Blender.
+  updateRotate(mouseX, mouseY) {
+    if (!this.rotateMode || !this.rotateRect) return;
+
+    // Eixo fixo (não é o centro do bounding box da rotação atual)
+    const cx = this.rotateAxisX;
+    const cy = this.rotateAxisY;
+
+    const dx = mouseX - cx;
+    const dy = mouseY - cy;
+
+    // Se o mouse tá em cima do centro, não rotaciona
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return;
+
+    // atan2 retorna radianos: 0 = direita, positivo = baixo (sentido horário)
+    // Converte pra graus e normaliza pra 0-360
+    let angleRad = Math.atan2(dy, dx);
+    let angleDeg = angleRad * 180 / Math.PI;
+    if (angleDeg < 0) angleDeg += 360;
+
+    // Arredonda pro múltiplo de 45° mais próximo (0, 45, 90, 135, 180, ...)
+    const snapped = Math.round(angleDeg / 45) * 45 % 360;
+
+    if (snapped !== this.rotateAngle) {
+      this.rotateAngle = snapped;
+      this.renderRotated();
+    }
+  },
+
+  // Renderiza a área rotacionada em torno do EIXO FIXO
+  // (centro da seleção original). O eixo não muda enquanto gira.
+  renderRotated() {
+    if (!this.rotateMode || !this.rotateBuffer || !this.rotateRect) return;
+
+    const { grid: buf, w, h } = this.rotateBuffer;
+    const rect = this.rotateRect;
+    const angle = this.rotateAngle;
+
+    // EIXO FIXO (centro original). Tudo gira em torno deste ponto.
+    const axisX = this.rotateAxisX;
+    const axisY = this.rotateAxisY;
+
+    // Raio necessário pra cobrir qualquer rotação
+    // (distância do eixo até o canto mais distante do buffer)
+    const maxRadius = Math.ceil(Math.sqrt(w * w + h * h) / 2) + 2;
+
+    // Restaura o FUNDO (canvas sem a área selecionada).
+    // Isso garante que pixels fora da seleção NUNCA sejam apagados.
+    if (this.rotateBackground) {
+      for (let yy = 0; yy < SIZE; yy++) {
+        for (let xx = 0; xx < SIZE; xx++) {
+          this.currentGrid[yy][xx] = this.rotateBackground[yy][xx];
+        }
+      }
+    }
+
+    // Rotação em radianos
+    const rad = angle * Math.PI / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    // Posição do eixo DENTRO do buffer (já calculada no enterRotateMode)
+    const axisInBufX = this.rotateAxisLocalX ?? (axisX - rect.x);
+    const axisInBufY = this.rotateAxisLocalY ?? (axisY - rect.y);
+
+    // Pra cada pixel do destino (dentro do raio ao redor do eixo),
+    // descobre qual pixel do buffer corresponde (rotação inversa).
+    for (let dy = -maxRadius; dy <= maxRadius; dy++) {
+      for (let dx = -maxRadius; dx <= maxRadius; dx++) {
+        // Rotação inversa: aplica -angle
+        const sx = dx * cos + dy * sin;
+        const sy = -dx * sin + dy * cos;
+
+        // Converte pra coordenada do buffer (relativo ao eixo dentro do buffer)
+        const bxf = sx + axisInBufX;
+        const byf = sy + axisInBufY;
+
+        // Nearest neighbor
+        const bxi = Math.round(bxf);
+        const byi = Math.round(byf);
+
+        // Fora do buffer? pula
+        if (bxi < 0 || bxi >= w || byi < 0 || byi >= h) continue;
+
+        const color = buf[byi][bxi];
+        if (color === null) continue;
+
+        // Posição no canvas (relativa ao eixo)
+        const px = Math.round(axisX + dx);
+        const py = Math.round(axisY + dy);
+        if (px < 0 || px >= SIZE || py < 0 || py >= SIZE) continue;
+
+        this.currentGrid[py][px] = color;
+      }
+    }
+
+    this.draw();
+  },
+
+  // Aplica a rotação (clique esquerdo)
+  applyRotate() {
+    if (!this.rotateMode) return;
+
+    const angle = this.rotateAngle;
+    this.rotateMode = false;
+    this.rotateBuffer = null;
+    this.rotateRect = null;
+    this.rotateAngle = 0;
+    this.rotateStartMouse = null;
+    this.rotateAxisX = null;
+    this.rotateAxisY = null;
+    this.rotateAxisLocalX = null;
+    this.rotateAxisLocalY = null;
+    this.rotateBackground = null;
+
+    this.buildFramesList();
+    this.draw();
+    this.flash(`✓ Rotated ${angle}°`);
+  },
+
+  // Cancela a rotação (clique direito ou Esc)
+  cancelRotateMode() {
+    if (!this.rotateMode) return;
+
+    // Restaura o undo (volta o estado original)
+    if (this.undoStack.length > 0) {
+      const snap = this.undoStack.pop();
+      const frame = this.currentFrame;
+      // Só restaura se for o mesmo frame
+      if (snap.direction === this.direction &&
+          snap.anim === this.anim &&
+          snap.frameIdx === this.frameIdx) {
+        frame._grid = snap.grid.map(row => row.slice());
+      }
+    }
+
+    this.rotateMode = false;
+    this.rotateBuffer = null;
+    this.rotateRect = null;
+    this.rotateAngle = 0;
+    this.rotateStartMouse = null;
+    this.rotateAxisX = null;
+    this.rotateAxisY = null;
+    this.rotateAxisLocalX = null;
+    this.rotateAxisLocalY = null;
+    this.rotateBackground = null;
+
+    this.buildFramesList();
+    this.draw();
+    this.flash('✕ Rotate cancelled');
+  },
+
+  // =====================================================================
+  // GRAB MODE (G depois de escolher o ângulo)
+  // =====================================================================
+
+  // Trava a rotação atual e entra em modo move (grab).
+  // Você pode arrastar o conteúdo rotacionado pra onde quiser.
+  enterGrabMode() {
+    if (this.isPlaying) return;
+    if (!this.rotateMode) {
+      this.flash('Enter rotate mode first (R)');
+      return;
+    }
+
+    // Salva APENAS a parte rotacionada (o que sobrou depois de
+    // remover o background). Sem isso, o grab move a tela toda.
+    const bg = this.rotateBackground;
+    const rotated = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+
+    for (let yy = 0; yy < SIZE; yy++) {
+      for (let xx = 0; xx < SIZE; xx++) {
+        const cur = this.currentGrid[yy][xx];
+        const back = bg ? bg[yy][xx] : null;
+        // Só guarda o que NÃO está no background (ou seja, o rotacionado)
+        if (cur !== back) {
+          rotated[yy][xx] = cur;
+        }
+      }
+    }
+
+    this.grabRotatedGrid = rotated;
+
+    this.grabMode = true;
+    this.grabStartX = null;
+    this.grabStartY = null;
+    this.grabOffsetX = 0;
+    this.grabOffsetY = 0;
+
+    this.flash('✥ Grab mode — move mouse to position • Left click = apply • Right click = back to rotate');
+  },
+
+  // Atualiza o deslocamento do grab baseado no movimento do mouse.
+  updateGrab(mouseX, mouseY) {
+    if (!this.grabMode) return;
+
+    // Primeira chamada: define a posição inicial
+    if (this.grabStartX === null) {
+      this.grabStartX = mouseX;
+      this.grabStartY = mouseY;
+      return;
+    }
+
+    // Calcula offset em pixels (arredondado)
+    const dx = mouseX - this.grabStartX;
+    const dy = mouseY - this.grabStartY;
+    const newOffsetX = Math.round(dx);
+    const newOffsetY = Math.round(dy);
+
+    if (newOffsetX === this.grabOffsetX && newOffsetY === this.grabOffsetY) return;
+
+    this.grabOffsetX = newOffsetX;
+    this.grabOffsetY = newOffsetY;
+    this.renderGrabbed();
+  },
+
+  // Renderiza a grid rotacionada deslocada pelo offset.
+  renderGrabbed() {
+    if (!this.grabMode || !this.grabRotatedGrid) return;
+
+    const bg = this.rotateBackground;
+    if (!bg) return;
+
+    const offX = this.grabOffsetX;
+    const offY = this.grabOffsetY;
+
+    // 1. Restaura o background (canvas SEM a seleção)
+    for (let yy = 0; yy < SIZE; yy++) {
+      for (let xx = 0; xx < SIZE; xx++) {
+        this.currentGrid[yy][xx] = bg[yy][xx];
+      }
+    }
+
+    // 2. Desenha APENAS a parte rotacionada, deslocada pelo offset
+    //    (grabRotatedGrid contém só os pixels rotacionados, não o fundo)
+    for (let yy = 0; yy < SIZE; yy++) {
+      for (let xx = 0; xx < SIZE; xx++) {
+        const color = this.grabRotatedGrid[yy][xx];
+        if (color === null) continue;
+        const px = xx + offX;
+        const py = yy + offY;
+        if (px < 0 || px >= SIZE || py < 0 || py >= SIZE) continue;
+        this.currentGrid[py][px] = color;
+      }
+    }
+
+    this.draw();
+  },
+
+  // Aplica o grab (clique esquerdo). Rotação + posição ficam.
+  applyGrab() {
+    if (!this.grabMode) return;
+
+    const offX = this.grabOffsetX;
+    const offY = this.grabOffsetY;
+
+    // Limpa tudo do modo grab, mas mantém o resultado na grid
+    this.grabMode = false;
+    this.grabRotatedGrid = null;
+    this.grabStartX = null;
+    this.grabStartY = null;
+    this.grabOffsetX = 0;
+    this.grabOffsetY = 0;
+
+    // Sai do rotate mode também (tudo foi aplicado)
+    this.rotateMode = false;
+    this.rotateBuffer = null;
+    this.rotateRect = null;
+    this.rotateAngle = 0;
+    this.rotateStartMouse = null;
+    this.rotateAxisX = null;
+    this.rotateAxisY = null;
+    this.rotateAxisLocalX = null;
+    this.rotateAxisLocalY = null;
+    this.rotateBackground = null;
+
+    this.buildFramesList();
+    this.draw();
+    this.flash(`✓ Applied (moved ${offX}, ${offY})`);
+  },
+
+  // Cancela o grab e VOLTA pra rotação travada (não cancela a rotação).
+  cancelGrabMode() {
+    if (!this.grabMode) return;
+
+    this.grabMode = false;
+    this.grabRotatedGrid = null;
+    this.grabStartX = null;
+    this.grabStartY = null;
+    this.grabOffsetX = 0;
+    this.grabOffsetY = 0;
+
+    // Volta pra rotação travada (renderiza a grid rotacionada novamente)
+    this.renderRotated();
+
+    this.flash('✕ Grab cancelled — back to rotate');
+  },
+
   startFloatMove() {
     if (!this.selection || this.selection.type !== 'rect') return;
     const { x, y, w, h } = this.selection.rect;
@@ -2289,6 +2698,27 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     canvas.addEventListener('mousedown', (e) => {
       e.preventDefault();
       if (this.isPlaying) return;
+
+      // Grab mode: aplica (esquerdo) ou volta pra rotate (direito)
+      if (this.grabMode) {
+        if (e.button === 0) {
+          this.applyGrab();
+        } else if (e.button === 2) {
+          this.cancelGrabMode();
+        }
+        return;
+      }
+
+      // Rotate mode tem prioridade: aplica (esquerdo) ou cancela (direito)
+      if (this.rotateMode) {
+        if (e.button === 0) {
+          this.applyRotate();
+        } else if (e.button === 2) {
+          this.cancelRotateMode();
+        }
+        return;
+      }
+
       const { cx, cy } = getCoords(e);
       document.getElementById('posInfo').textContent = `${cx},${cy}`;
       if (cx < 0 || cx >= SIZE || cy < 0 || cy >= SIZE) return;
@@ -2375,6 +2805,21 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
     canvas.addEventListener('mousemove', (e) => {
       if (this.isPlaying) return;
+
+      // Grab mode: só atualiza o offset e sai
+      if (this.grabMode) {
+        const { cx, cy } = getCoords(e);
+        this.updateGrab(cx, cy);
+        return;
+      }
+
+      // Rotate mode: só atualiza a rotação e sai
+      if (this.rotateMode) {
+        const { cx, cy } = getCoords(e);
+        this.updateRotate(cx, cy);
+        return;
+      }
+
       const { cx, cy } = getCoords(e);
       if (cx >= 0 && cx < SIZE && cy >= 0 && cy < SIZE) {
         document.getElementById('posInfo').textContent = `${cx},${cy}`;
@@ -2413,6 +2858,10 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     });
 
     canvas.addEventListener('mouseup', () => {
+      // Grab/rotate modes não usam mouseup (aplicam/cancelam no mousedown)
+      if (this.grabMode) return;
+      if (this.rotateMode) return;
+
       this.erasingRightClick = false;
 
       // Finalize rect selection
@@ -2449,7 +2898,10 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       document.getElementById('posInfo').textContent = '-,-';
     });
 
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      // Em rotate mode, clique direito cancela (já é tratado no mousedown)
+    });
 
     // Zoom com a rodinha do mouse (sobre o canvas)
     // deltaY < 0 => roda pra cima  => zoom in
@@ -2493,7 +2945,13 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         return;
       }
       if (e.key === 'Escape') {
-        this.clearSelection();
+        if (this.grabMode) {
+          this.cancelGrabMode();
+        } else if (this.rotateMode) {
+          this.cancelRotateMode();
+        } else {
+          this.clearSelection();
+        }
         return;
       }
       // Delete / Backspace = erase contents of selection
@@ -2520,6 +2978,18 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
         e.preventDefault();
         this.pasteSelection();
+        return;
+      }
+      // R = entrar em modo rotate na seleção atual
+      if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        this.enterRotateMode();
+        return;
+      }
+      // G = travar rotação e entrar em modo move (grab)
+      if (e.key.toLowerCase() === 'g' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        this.enterGrabMode();
         return;
       }
 

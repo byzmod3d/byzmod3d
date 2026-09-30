@@ -588,15 +588,23 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
           <i class="fa-solid fa-eye-dropper"></i>
           <span>Picker</span>
         </button>
-        <button class="tool-btn" data-tool="rect" onclick="ed.setTool('rect', this)" title="Rectangle Select">
+        <button class="tool-btn" data-tool="rect" onclick="ed.setTool('rect', this)" title="Rectangle Select (M)">
           <i class="fa-solid fa-vector-square"></i>
           <span>Rect</span>
         </button>
-        <button class="tool-btn" data-tool="move" onclick="ed.setTool('move', this)" title="Move Selection">
+        <button class="tool-btn" data-tool="ellipse" onclick="ed.setTool('ellipse', this)" title="Ellipse Select (O)">
+          <i class="fa-solid fa-circle"></i>
+          <span>Ellipse</span>
+        </button>
+        <button class="tool-btn" data-tool="lasso" onclick="ed.setTool('lasso', this)" title="Lasso Select (L)">
+          <i class="fa-solid fa-draw-polygon"></i>
+          <span>Lasso</span>
+        </button>
+        <button class="tool-btn" data-tool="move" onclick="ed.setTool('move', this)" title="Move Selection (V)">
           <i class="fa-solid fa-up-down-left-right"></i>
           <span>Move</span>
         </button>
-        <button class="tool-btn" data-tool="text" onclick="ed.setTool('text', this)" title="Text">
+        <button class="tool-btn" data-tool="text" onclick="ed.setTool('text', this)" title="Text (T)">
           <i class="fa-solid fa-font"></i>
           <span>Text</span>
         </button>
@@ -1025,6 +1033,11 @@ const ed = {
   isSelecting: false,
   selectStart: null,
   previewPt: null,
+
+  // Lasso state (polygon click-by-click)
+  lassoPoints: [],         // array de { x, y } — pontos do polígono em construção
+  lassoClosed: false,      // true quando o polígono foi fechado (virou seleção)
+  lassoHovering: null,     // { x, y } — posição atual do mouse (linha de preview)
   isFloatingMove: false,
   floatBuffer: null,
   floatOffsetX: 0,
@@ -1760,9 +1773,39 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   // TOOL SELECTION
   // =====================================================================
   setTool(t, btn) {
-    // Ao clicar em Brush, cancelar imediatamente qualquer seleção Rect.
-    if (t === 'brush' && (this.selection || this.isSelecting)) {
-      this.clearSelection();
+    // Ferramentas que PRESERVAM a seleção ativa (agem dentro dela):
+    //  - bucket (preenche dentro do Rect/Ellipse/Lasso)
+    //  - wand (apaga dentro do Rect/Ellipse/Lasso)
+    // Essas duas NÃO devem desmarcar a seleção, senão perdem a "área útil".
+    const KEEP_SELECTION_TOOLS = ['bucket', 'wand'];
+
+    if (this.tool !== t) {
+      // Se estava em rotate/grab, cancela antes de trocar
+      if (this.rotateMode && !this.grabMode) {
+        this.cancelRotateMode();
+      }
+      if (this.grabMode) {
+        this.cancelGrabMode();
+      }
+
+      // Limpa lasso em construção SE estava no lasso
+      if (this.tool === 'lasso') {
+        this.lassoPoints = [];
+        this.lassoClosed = false;
+        this.lassoHovering = null;
+      }
+
+      // Commit float move se estiver rodando
+      if (this.isFloatingMove) {
+        this.commitFloatMove();
+      }
+
+      // ✅ Só desmarca a seleção se a ferramenta nova NÃO for bucket/wand.
+      // Bucket e Wand preservam a seleção pra agir DENTRO dela.
+      // Rect ↔ Ellipse ↔ Lasso ↔ Move e Brush/Eraser/Picker/Text limpam.
+      if (this.selection && !KEEP_SELECTION_TOOLS.includes(t)) {
+        this.clearSelection();
+      }
     }
 
     this.tool = t;
@@ -1778,6 +1821,9 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     else if (t === 'picker') this.canvas.style.cursor = 'copy';
     else if (t === 'text') this.canvas.style.cursor = 'text';
     else this.canvas.style.cursor = 'crosshair';
+
+    // Redesenha o overlay pra refletir o estado limpo
+    this.drawOverlay();
   },
 
   // =====================================================================
@@ -1854,26 +1900,120 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       this.overlayCtx.restore();
     }
 
-    // Selection rect — linha sólida fina visível
-    // Sem tracejado, sem preenchimento, sem glow. Apenas 1px liso.
-    if (this.selection && this.selection.type === 'rect') {
-      let rx = this.selection.rect.x;
-      let ry = this.selection.rect.y;
-      const w = this.selection.rect.w;
-      const h = this.selection.rect.h;
+    // Selection ativa — desenha conforme o tipo
+    if (this.selection) {
+      // Calcula rect (bounding box) — lasso guarda rect também
+      let rx = this.selection.rect ? this.selection.rect.x : 0;
+      let ry = this.selection.rect ? this.selection.rect.y : 0;
+      const w = this.selection.rect ? this.selection.rect.w : 0;
+      const h = this.selection.rect ? this.selection.rect.h : 0;
       if (this.isFloatingMove) { rx += this.floatOffsetX; ry += this.floatOffsetY; }
 
-      this._drawSolidRect(rx, ry, w, h, '#ffffff');
+      if (this.selection.type === 'rect') {
+        this._drawSolidRect(rx, ry, w, h, '#ffffff');
+      } else if (this.selection.type === 'ellipse') {
+        this._drawSolidEllipse(rx, ry, w, h, '#ffffff');
+      } else if (this.selection.type === 'lasso') {
+        // Aplica offset se estiver em floating move
+        let pts = this.selection.points;
+        if (this.isFloatingMove && this.floatOffsetX !== 0 || this.floatOffsetY !== 0) {
+          pts = pts.map(p => ({ x: p.x + this.floatOffsetX, y: p.y + this.floatOffsetY }));
+        }
+        this._drawSolidPolygon(pts, '#ffffff', true);
+      }
     }
 
-    // Preview durante o arrasto — mesmo estilo
+    // Preview durante o arrasto (rect e ellipse) — mesmo estilo
     if (this.isSelecting && this.selectStart && this.previewPt) {
       const x0 = Math.min(this.selectStart[0], this.previewPt[0]);
       const y0 = Math.min(this.selectStart[1], this.previewPt[1]);
       const w = Math.abs(this.previewPt[0] - this.selectStart[0]) + 1;
       const h = Math.abs(this.previewPt[1] - this.selectStart[1]) + 1;
-      this._drawSolidRect(x0, y0, w, h, '#ffffff');
+
+      if (this.tool === 'ellipse') {
+        this._drawSolidEllipse(x0, y0, w, h, '#ffffff');
+      } else {
+        this._drawSolidRect(x0, y0, w, h, '#ffffff');
+      }
     }
+
+    // Preview do Lasso (pontos + linha até o mouse)
+    if (this.tool === 'lasso' && !this.lassoClosed && this.lassoPoints.length > 0) {
+      this._drawSolidPolygon(this.lassoPoints, '#ffffff', false);
+
+      // Linha do último ponto até o mouse
+      const last = this.lassoPoints[this.lassoPoints.length - 1];
+      if (this.lassoHovering) {
+        this.overlayCtx.save();
+        this.overlayCtx.strokeStyle = '#ffffff';
+        this.overlayCtx.lineWidth = 0.5;
+        this.overlayCtx.setLineDash([2, 2]);
+        this.overlayCtx.beginPath();
+        this.overlayCtx.moveTo(last.x + 0.5, last.y + 0.5);
+        this.overlayCtx.lineTo(this.lassoHovering.x + 0.5, this.lassoHovering.y + 0.5);
+        this.overlayCtx.stroke();
+        this.overlayCtx.restore();
+      }
+
+      // Desenha os pontinhos de vértice
+      this.overlayCtx.save();
+      this.overlayCtx.fillStyle = '#ffffff';
+      this.lassoPoints.forEach((pt, i) => {
+        const r = (i === 0) ? 1.2 : 0.8;
+        this.overlayCtx.beginPath();
+        this.overlayCtx.arc(pt.x + 0.5, pt.y + 0.5, r, 0, Math.PI * 2);
+        this.overlayCtx.fill();
+      });
+      // Destaque no primeiro ponto (indica "clique aqui pra fechar")
+      if (this.lassoPoints.length >= 3) {
+        const first = this.lassoPoints[0];
+        this.overlayCtx.strokeStyle = '#ffffff';
+        this.overlayCtx.lineWidth = 0.6;
+        this.overlayCtx.beginPath();
+        this.overlayCtx.arc(first.x + 0.5, first.y + 0.5, 2.5, 0, Math.PI * 2);
+        this.overlayCtx.stroke();
+      }
+      this.overlayCtx.restore();
+    }
+  },
+
+  // Elipse de seleção: linha fina sólida
+  _drawSolidEllipse(x, y, w, h, color) {
+    const ctx = this.overlayCtx;
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    // Usa o bounding box e desenha uma elipse inscrita
+    // (coordenadas em .5 pra ficar fino)
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const rx = Math.max(0.01, w / 2 - 0.25);
+    const ry = Math.max(0.01, h / 2 - 0.25);
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  },
+
+  // Polígono de seleção: linha fina sólida
+  _drawSolidPolygon(points, color, closed) {
+    if (!points || points.length < 2) return;
+    const ctx = this.overlayCtx;
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(points[0].x + 0.5, points[0].y + 0.5);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x + 0.5, points[i].y + 0.5);
+    }
+    if (closed) ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
   },
 
   // Retângulo de seleção: linha fina de verdade (0.5px do canvas)
@@ -2197,6 +2337,9 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       const key = cy * SIZE + cx;
       if (visited.has(key)) continue;
       visited.add(key);
+      // ⚠️ Respeita a MÁSCARA da seleção (Rect/Ellipse/Lasso).
+      // Sem isso, a wand vaza pra fora da seleção e apaga tudo.
+      if (!this.isInsideSelection(cx, cy)) continue;
       const current = this.currentGrid[cy][cx];
       if (!current || !this.colorMatches(current, targetColor)) continue;
       this.currentGrid[cy][cx] = null;
@@ -2246,11 +2389,46 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       cx -= this.floatOffsetX;
       cy -= this.floatOffsetY;
     }
+
+    // RECT: bounding box simples
     if (this.selection.type === 'rect') {
       const { x: sx, y: sy, w, h } = this.selection.rect;
       return cx >= sx && cx < sx + w && cy >= sy && cy < sy + h;
     }
+
+    // ELLIPSE: equação da elipse (centro + raios)
+    if (this.selection.type === 'ellipse') {
+      const { x: sx, y: sy, w, h } = this.selection.rect;
+      const rx = w / 2;
+      const ry = h / 2;
+      const centerX = sx + rx;
+      const centerY = sy + ry;
+      const dx = (cx + 0.5 - centerX) / rx;
+      const dy = (cy + 0.5 - centerY) / ry;
+      return (dx * dx + dy * dy) <= 1;
+    }
+
+    // LASSO: ray casting no polígono
+    if (this.selection.type === 'lasso') {
+      return this.isInsidePolygon(cx + 0.5, cy + 0.5, this.selection.points);
+    }
+
     return true;
+  },
+
+  // Ray casting: conta quantas arestas do polígono cruzam um raio
+  // horizontal à direita do ponto. Se for ímpar, está dentro.
+  isInsidePolygon(px, py, points) {
+    if (!points || points.length < 3) return false;
+    let inside = false;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+      const xi = points[i].x, yi = points[i].y;
+      const xj = points[j].x, yj = points[j].y;
+      const intersect = ((yi > py) !== (yj > py)) &&
+                        (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
   },
 
   clearSelection() {
@@ -2263,6 +2441,10 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.isSelecting = false;
     this.selectStart = null;
     this.previewPt = null;
+    // Lasso state
+    this.lassoPoints = [];
+    this.lassoClosed = false;
+    this.lassoHovering = null;
     this.drawOverlay();
   },
 
@@ -2270,8 +2452,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   // Keeps selection active after deleting (so you can keep painting inside).
   deleteSelection() {
     if (this.isPlaying) return;
-    if (!this.selection || this.selection.type !== 'rect') {
-      this.flash('No active selection — use Rect (M) first');
+    if (!this.selection) {
+      this.flash('No active selection — use Rect/Ellipse/Lasso first');
       return;
     }
 
@@ -2287,6 +2469,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     for (let yy = y; yy < y + h; yy++) {
       for (let xx = x; xx < x + w; xx++) {
         if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        // ⚠️ Respeita a MÁSCARA (elipse/lasso não apagam fora da forma)
+        if (!this.isInsideSelection(xx, yy)) continue;
         if (this.currentGrid[yy][xx] !== null) {
           this.currentGrid[yy][xx] = null;
           apagados++;
@@ -2303,8 +2487,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   // A seleção continua ativa depois (pra você poder colar em outro lugar).
   copySelection() {
     if (this.isPlaying) return;
-    if (!this.selection || this.selection.type !== 'rect') {
-      this.flash('No active selection — use Rect (M) first');
+    if (!this.selection) {
+      this.flash('No active selection — use Rect/Ellipse/Lasso first');
       return;
     }
 
@@ -2318,6 +2502,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         const srcX = x + xx;
         const srcY = y + yy;
         if (srcX < 0 || srcX >= SIZE || srcY < 0 || srcY >= SIZE) continue;
+        // ⚠️ Respeita a máscara — pixels fora da elipse/lasso ficam null
+        if (!this.isInsideSelection(srcX, srcY)) continue;
         const color = this.currentGrid[srcY][srcX];
         buffer[yy][xx] = color;
         if (color !== null) copiados++;
@@ -2342,15 +2528,22 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
     const { grid: buf, w: bw, h: bh } = this.rectClipboard;
 
-    // Onde colar? Se houver seleção ativa, usa o canto dela.
-    // Senão, cola em (0,0).
+    // Onde colar?
+    //  - Se houver seleção ativa (rect, ellipse OU lasso), usa a
+    //    bounding box dela como ponto de colagem.
+    //  - Senão, cola em (0,0).
     let destX = 0;
     let destY = 0;
-    if (this.selection && this.selection.type === 'rect') {
+    const hasSelection = this.selection && this.selection.rect;
+    if (hasSelection) {
       destX = this.selection.rect.x;
       destY = this.selection.rect.y;
     }
 
+    // ⚠️ Durante a colagem, NÃO respeitamos a máscara da seleção.
+    // A máscara só serve pra limitar EDIÇÃO (brush/eraser/bucket),
+    // mas o Ctrl+V deve colar o retângulo copiado por inteiro,
+    // mesmo que a seleção atual seja um lasso/elipse.
     let colados = 0;
     for (let yy = 0; yy < bh; yy++) {
       for (let xx = 0; xx < bw; xx++) {
@@ -2376,32 +2569,43 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   // Entra em modo rotate: copia a seleção pra um buffer e espera o mouse.
   enterRotateMode() {
     if (this.isPlaying) return;
-    if (!this.selection || this.selection.type !== 'rect') {
-      this.flash('No active selection — use Rect (M) first');
+    if (!this.selection) {
+      this.flash('No active selection — use Rect/Ellipse/Lasso first');
       return;
     }
 
-    // Se já está em rotate, não faz nada
-    if (this.rotateMode) {
-      this.flash('Already in rotate mode');
+    // Garante que a seleção tem bounding box
+    if (!this.selection.rect) {
+      this.flash('⚠️ Selection has no bounding box');
       return;
     }
 
-    // Se está em grab, "fixa" o grab atual antes de rotacionar.
-    // Isso significa: o estado atual (movido) vira a base pra rotação.
+    // Se está em grab, "fixa" o grab primeiro (aplica o offset atual)
     if (this.grabMode) {
-      // Aplica o offset atual na grid de trabalho
       this._commitGrabOffset();
     }
 
+    // Se os dados de rotate já estão prontos (buffer, rect, background),
+    // apenas reseta o ângulo e reativa o modo — não precisa recopiar nada.
+    if (this.rotateMode && this.rotateBuffer && this.rotateRect && this.rotateBackground) {
+      this.rotateAngle = 0;
+      this.draw();
+      this.flash('🔄 Rotate mode — move mouse to rotate • Left click = apply • Right click = cancel');
+      return;
+    }
+
+    // Caso contrário, inicializa o rotate do zero
     const { x, y, w, h } = this.selection.rect;
 
-    // Copia a área selecionada pra um buffer (pixels originais)
+    // Copia APENAS os pixels dentro da MÁSCARA (não só da bounding box).
+    // Elipse, lasso e rect respeitam sua própria forma.
     const buf = Array.from({ length: h }, () => Array(w).fill(null));
     for (let yy = 0; yy < h; yy++) {
       for (let xx = 0; xx < w; xx++) {
         const sx = x + xx, sy = y + yy;
         if (sx < 0 || sx >= SIZE || sy < 0 || sy >= SIZE) continue;
+        // ⚠️ Respeita a máscara
+        if (!this.isInsideSelection(sx, sy)) continue;
         buf[yy][xx] = this.currentGrid[sy][sx];
       }
     }
@@ -2461,10 +2665,13 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     // o rotacionado por cima — assim nada fora da seleção é apagado.
     const background = this.currentGrid.map(row => row.slice());
 
-    // Remove a área selecionada do background (vai ser redesenhada rotacionada)
+    // Remove a área selecionada do background — MAS só os pixels
+    // que estão DENTRO da máscara (o resto fica intacto)
     for (let yy = y; yy < y + h; yy++) {
       for (let xx = x; xx < x + w; xx++) {
         if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        // ⚠️ Respeita a máscara
+        if (!this.isInsideSelection(xx, yy)) continue;
         background[yy][xx] = null;
       }
     }
@@ -2588,11 +2795,13 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.draw();
   },
 
-  // Aplica a rotação (clique esquerdo)
+  // Aplica a rotação (clique esquerdo) — limpa TUDO e volta pro brush
   applyRotate() {
     if (!this.rotateMode) return;
 
     const angle = this.rotateAngle;
+
+    // Limpa completo
     this.rotateMode = false;
     this.rotateBuffer = null;
     this.rotateRect = null;
@@ -2604,11 +2813,13 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.rotateAxisLocalY = null;
     this.rotateBackground = null;
 
+    // Limpa seleção também (rotação aplicada = fim do ciclo)
+    this.selection = null;
+
     this.buildFramesList();
     this.draw();
     this.flash(`✓ Rotated ${angle}° — back to brush`);
 
-    // Volta pro pincel automaticamente
     setTimeout(() => {
       const brushBtn = document.querySelector('[data-tool="brush"]');
       if (brushBtn) this.setTool('brush', brushBtn);
@@ -2641,6 +2852,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.rotateAxisLocalX = null;
     this.rotateAxisLocalY = null;
     this.rotateBackground = null;
+    // Limpa a seleção também
+    this.selection = null;
 
     this.buildFramesList();
     this.draw();
@@ -2694,20 +2907,27 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     }
 
     // CASO 2: não está em rotate — entra em grab direto da seleção
-    // (copia a seleção pra um buffer, limpa a área, e deixa mover)
-    if (!this.selection || this.selection.type !== 'rect') {
-      this.flash('No active selection — use Rect (M) first');
+    // Aceita QUALQUER tipo de seleção (rect, ellipse, lasso)
+    if (!this.selection) {
+      this.flash('No active selection — use Rect (M), Ellipse (O) or Lasso (L) first');
+      return;
+    }
+    // Garante que a seleção tem uma bounding box válida
+    if (!this.selection.rect) {
+      this.flash('⚠️ Selection has no bounding box');
       return;
     }
 
     const { x, y, w, h } = this.selection.rect;
 
-    // Copia a área selecionada
+    // Copia APENAS os pixels dentro da MÁSCARA
     const buf = Array.from({ length: h }, () => Array(w).fill(null));
     for (let yy = 0; yy < h; yy++) {
       for (let xx = 0; xx < w; xx++) {
         const sx = x + xx, sy = y + yy;
         if (sx < 0 || sx >= SIZE || sy < 0 || sy >= SIZE) continue;
+        // ⚠️ Respeita a máscara
+        if (!this.isInsideSelection(sx, sy)) continue;
         buf[yy][xx] = this.currentGrid[sy][sx];
       }
     }
@@ -2715,11 +2935,13 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     // Snapshot pra poder desfazer
     this.pushUndo('grab');
 
-    // Guarda o background (canvas SEM a seleção)
+    // Guarda o background (canvas SEM a seleção) — só remove pixels na máscara
     const background = this.currentGrid.map(row => row.slice());
     for (let yy = y; yy < y + h; yy++) {
       for (let xx = x; xx < x + w; xx++) {
         if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        // ⚠️ Respeita a máscara
+        if (!this.isInsideSelection(xx, yy)) continue;
         background[yy][xx] = null;
       }
     }
@@ -2756,19 +2978,35 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.flash('✥ Grab mode — move mouse • Left click = apply • Right click = cancel');
   },
 
-  // Aplica o offset do grab na grid e reconstrói o estado de rotação
-  // (versão que funcionava: 1 ciclo G→R→G).
+  // Aplica o offset do grab na grid e reconstrói TUDO o que
+  // o modo rotate precisa. Assim R funciona DEPOIS de G.
   _commitGrabOffset() {
     if (!this.grabMode) return;
 
     const offX = this.grabOffsetX;
     const offY = this.grabOffsetY;
 
-    // 1) Aplica o offset do grab na grid
+    // 1) Aplica o offset do grab na grid de trabalho
+    //    (se não veio de rotate, rotateBackground pode ser null; nesse
+    //    caso, só limpa o grab e continua — a grid já está correta)
+    if (!this.rotateBackground) {
+      // Sem background salvo — só sai do grab
+      this.grabMode = false;
+      this.grabRotatedGrid = null;
+      this.grabStartX = null;
+      this.grabStartY = null;
+      this.grabOffsetX = 0;
+      this.grabOffsetY = 0;
+      this.rotateMode = false;
+      this.selection = null;
+      this.drawOverlay();
+      return;
+    }
+
     if (offX !== 0 || offY !== 0) {
       const bg = this.rotateBackground;
       if (bg && this.grabRotatedGrid) {
-        // Restaura background
+        // Restaura background (só na área afetada)
         for (let yy = 0; yy < SIZE; yy++) {
           for (let xx = 0; xx < SIZE; xx++) {
             this.currentGrid[yy][xx] = bg[yy][xx];
@@ -2796,10 +3034,15 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.grabOffsetX = 0;
     this.grabOffsetY = 0;
 
-    // 3) RECALCULA a bounding box REAL do conteúdo
-    const bg = this.rotateBackground || this.currentGrid.map(r => r.map(() => null));
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    // 3) RECALCULA a bounding box REAL do conteúdo atual
+    //    (comparando com o background)
+    const bg = this.rotateBackground;
+    if (!bg) {
+      this.rotateRect = null;
+      return;
+    }
 
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (let yy = 0; yy < SIZE; yy++) {
       for (let xx = 0; xx < SIZE; xx++) {
         const cur = this.currentGrid[yy][xx];
@@ -2818,51 +3061,56 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       return;
     }
 
-    // 4) bbox real
-    const newRectX = minX;
-    const newRectY = minY;
-    const newRectW = maxX - minX + 1;
-    const newRectH = maxY - minY + 1;
+    // 4) Nova bbox real
+    const rX = minX;
+    const rY = minY;
+    const rW = maxX - minX + 1;
+    const rH = maxY - minY + 1;
 
-    // 5) Reconstrói rotateBuffer
-    const newBuf = Array.from({ length: newRectH }, () => Array(newRectW).fill(null));
-    for (let yy = 0; yy < newRectH; yy++) {
-      for (let xx = 0; xx < newRectW; xx++) {
-        newBuf[yy][xx] = this.currentGrid[newRectY + yy][newRectX + xx];
+    // 5) Reconstrói rotateBuffer (o que tá em cima)
+    const newBuf = Array.from({ length: rH }, () => Array(rW).fill(null));
+    for (let yy = 0; yy < rH; yy++) {
+      for (let xx = 0; xx < rW; xx++) {
+        newBuf[yy][xx] = this.currentGrid[rY + yy][rX + xx];
       }
     }
 
-    // 6) Reconstrói rotateBackground
+    // 6) Reconstrói rotateBackground (o que tá por baixo)
+    //    = o background antigo, com a bbox nova removida
     const newBg = bg.map(row => row.slice());
-    for (let yy = newRectY; yy < newRectY + newRectH; yy++) {
-      for (let xx = newRectX; xx < newRectX + newRectW; xx++) {
+    for (let yy = rY; yy < rY + rH; yy++) {
+      for (let xx = rX; xx < rX + rW; xx++) {
         if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
         newBg[yy][xx] = null;
       }
     }
 
-    // 7) Aplica novo estado
-    this.rotateRect = { x: newRectX, y: newRectY, w: newRectW, h: newRectH };
-    this.rotateBuffer = { grid: newBuf, w: newRectW, h: newRectH };
+    // 7) Aplica o novo estado de rotate (COMPLETO)
+    this.rotateRect = { x: rX, y: rY, w: rW, h: rH };
+    this.rotateBuffer = { grid: newBuf, w: rW, h: rH };
     this.rotateBackground = newBg;
 
-    // 8) Eixo
-    const axisLocalX = newRectW / 2;
-    const axisLocalY = newRectH / 2;
+    // 8) Eixo no centro da bbox
+    const axisLocalX = rW / 2;
+    const axisLocalY = rH / 2;
     this.rotateAxisLocalX = axisLocalX;
     this.rotateAxisLocalY = axisLocalY;
-    this.rotateAxisX = newRectX + axisLocalX;
-    this.rotateAxisY = newRectY + axisLocalY;
+    this.rotateAxisX = rX + axisLocalX;
+    this.rotateAxisY = rY + axisLocalY;
 
-    // 9) Ângulo
+    // 9) Ângulo resetado
     this.rotateAngle = 0;
 
-    // 10) Sincroniza seleção
+    // 10) Reativa o rotateMode pra que R funcione direto
+    //     (assim o usuário pode apertar R sem precisar de outro passo)
+    this.rotateMode = true;
+
+    // 11) Sincroniza selection com a nova bbox
     this.selection = { type: 'rect', rect: {
-      x: newRectX, y: newRectY, w: newRectW, h: newRectH
+      x: rX, y: rY, w: rW, h: rH
     }};
 
-    // 11) Redesenha
+    // 12) Redesenha
     this.drawOverlay();
   },
 
@@ -2971,7 +3219,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     const offX = this.grabOffsetX;
     const offY = this.grabOffsetY;
 
-    // Limpa o modo grab, mas mantém o resultado na grid
+    // Limpa o grab
     this.grabMode = false;
     this.grabRotatedGrid = null;
     this.grabStartX = null;
@@ -2979,7 +3227,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.grabOffsetX = 0;
     this.grabOffsetY = 0;
 
-    // Aplica tudo (sai do rotate também)
+    // Limpa tudo (rotação aplicada, fim do ciclo)
     this.rotateMode = false;
     this.rotateBuffer = null;
     this.rotateRect = null;
@@ -2990,12 +3238,12 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.rotateAxisLocalX = null;
     this.rotateAxisLocalY = null;
     this.rotateBackground = null;
+    this.selection = null;
 
     this.buildFramesList();
     this.draw();
     this.flash(`✓ Applied (moved ${offX}, ${offY}) — back to brush`);
 
-    // Volta pro pincel automaticamente
     setTimeout(() => {
       const brushBtn = document.querySelector('[data-tool="brush"]');
       if (brushBtn) this.setTool('brush', brushBtn);
@@ -3006,7 +3254,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   cancelGrabMode() {
     if (!this.grabMode) return;
 
-    // Salva o estado atual da grid (com o offset aplicado)
+    // Salva o estado atual da grid (com o offset já aplicado via renderGrabbed)
     const gridNow = this.currentGrid.map(row => row.slice());
 
     this.grabMode = false;
@@ -3017,7 +3265,6 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.grabOffsetY = 0;
 
     // Reconstrói rotateBuffer/Background a partir do estado atual
-    // (isso garante que a próxima rotação funcione)
     const bg = this.rotateBackground;
     if (bg && this.rotateRect) {
       const rect = this.rotateRect;
@@ -3031,6 +3278,9 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       this.rotateAngle = 0;
     }
 
+    // Garante que o rotateMode está ativo
+    this.rotateMode = true;
+
     // Volta pra rotação travada (renderiza a grid rotacionada novamente)
     this.renderRotated();
 
@@ -3038,7 +3288,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   },
 
   startFloatMove() {
-    if (!this.selection || this.selection.type !== 'rect') return;
+    if (!this.selection) return;
     const { x, y, w, h } = this.selection.rect;
     this.isFloatingMove = true;
     this.floatOffsetX = 0;
@@ -3048,10 +3298,12 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.floatBuffer.height = SIZE;
     const fctx = this.floatBuffer.getContext('2d');
 
-    // Copy selection content
+    // Copia só os pixels DENTRO da máscara
     for (let yy = y; yy < y + h; yy++) {
       for (let xx = x; xx < x + w; xx++) {
         if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        // ⚠️ Respeita a máscara
+        if (!this.isInsideSelection(xx, yy)) continue;
         const color = this.currentGrid[yy][xx];
         if (color) {
           fctx.fillStyle = color;
@@ -3060,10 +3312,12 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       }
     }
 
-    // Clear original
+    // Remove só os pixels DENTRO da máscara
     for (let yy = y; yy < y + h; yy++) {
       for (let xx = x; xx < x + w; xx++) {
         if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
+        // ⚠️ Respeita a máscara
+        if (!this.isInsideSelection(xx, yy)) continue;
         this.currentGrid[yy][xx] = null;
       }
     }
@@ -3200,12 +3454,49 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         return;
       }
 
-      // TOOL: RECT
-      if (this.tool === 'rect') {
+      // TOOL: RECT ou ELLIPSE — mesmo comportamento (arrastar)
+      if (this.tool === 'rect' || this.tool === 'ellipse') {
         this.clearSelection();
         this.isSelecting = true;
         this.selectStart = [cx, cy];
         this.previewPt = [cx, cy];
+        this.drawOverlay();
+        return;
+      }
+
+      // TOOL: LASSO — clique por clique
+      if (this.tool === 'lasso') {
+        // Se já tem pontos e clicou PERTO do primeiro ponto → fecha o polígono
+        if (this.lassoPoints.length >= 3) {
+          const first = this.lassoPoints[0];
+          const dist = Math.hypot(cx - first.x, cy - first.y);
+          if (dist <= 2) {
+            // Fecha a seleção — guarda points + rect (bounding box)
+            const pts = this.lassoPoints.slice();
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const p of pts) {
+              if (p.x < minX) minX = p.x;
+              if (p.x > maxX) maxX = p.x;
+              if (p.y < minY) minY = p.y;
+              if (p.y > maxY) maxY = p.y;
+            }
+            this.selection = {
+              type: 'lasso',
+              points: pts,
+              rect: { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 }
+            };
+            this.lassoClosed = true;
+            this.lassoPoints = [];
+            this.lassoHovering = null;
+            this.flash(`✓ Lasso closed (${this.selection.points.length} points)`);
+            this.drawOverlay();
+            return;
+          }
+        }
+
+        // Adiciona um ponto novo
+        this.lassoPoints.push({ x: cx, y: cy });
+        this.flash(`Lasso: ${this.lassoPoints.length} point(s) — click near first point to close`);
         this.drawOverlay();
         return;
       }
@@ -3262,7 +3553,14 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         return;
       }
 
-      // Rect selection drag
+      // Lasso: atualiza a linha de preview até o mouse
+      if (this.tool === 'lasso' && !this.lassoClosed && this.lassoPoints.length > 0) {
+        this.lassoHovering = { x: cx, y: cy };
+        this.drawOverlay();
+        return;
+      }
+
+      // Rect/Ellipse selection drag
       if (this.isSelecting && this.selectStart) {
         this.previewPt = [cx, cy];
         this.drawOverlay();
@@ -3294,7 +3592,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
       this.erasingRightClick = false;
 
-      // Finalize rect selection
+      // Finalize rect/ellipse selection
       if (this.isSelecting && this.selectStart && this.previewPt) {
         const [x0, y0] = this.selectStart;
         const [x1, y1] = this.previewPt;
@@ -3303,7 +3601,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         const w = Math.abs(x1 - x0) + 1;
         const h = Math.abs(y1 - y0) + 1;
         if (w > 0 && h > 0) {
-          this.selection = { type: 'rect', rect: { x: sx, y: sy, w, h } };
+          const type = (this.tool === 'ellipse') ? 'ellipse' : 'rect';
+          this.selection = { type, rect: { x: sx, y: sy, w, h } };
         }
         this.isSelecting = false;
         this.selectStart = null;
@@ -3425,7 +3724,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
       const map = {
         'b': 'brush', 'e': 'eraser', 'g': 'bucket', 'w': 'wand',
-        'i': 'picker', 'm': 'rect', 'v': 'move', 't': 'text'
+        'i': 'picker', 'm': 'rect', 'o': 'ellipse', 'l': 'lasso',
+        'v': 'move', 't': 'text'
       };
       const t = map[e.key.toLowerCase()];
       if (t) {

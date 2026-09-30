@@ -645,6 +645,10 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
           <i class="fa-solid fa-draw-polygon"></i>
           <span>Lasso</span>
         </button>
+        <button class="tool-btn" data-tool="path" onclick="ed.setTool('path', this)" title="Path Brush (P) — draw path, right-click to apply">
+          <i class="fa-solid fa-signature"></i>
+          <span>Path</span>
+        </button>
         <button class="tool-btn" data-tool="move" onclick="ed.setTool('move', this)" title="Move Selection (V)">
           <i class="fa-solid fa-up-down-left-right"></i>
           <span>Move</span>
@@ -661,6 +665,25 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
       <label class="text-[9px] text-slate-400 uppercase font-bold">Text (5×7 pixel art)</label>
       <input type="text" id="textInput" placeholder="Hello" maxlength="20" class="w-full mt-1 bg-[#1a1625] border border-[#4c4463] rounded-lg px-2 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-violet-400">
       <p class="text-[9px] text-violet-300 text-center mt-1 font-mono">Click on canvas to place</p>
+    </div>
+
+    <!-- PATH MODE (aparece só com Path tool) -->
+    <div id="pathOptions" class="hidden bg-emerald-900/30 border border-emerald-500/40 rounded-lg p-2">
+      <label class="text-[9px] text-slate-400 uppercase font-bold">Path Mode</label>
+      <div class="grid grid-cols-3 gap-1 mt-1">
+        <button class="effect-btn active" data-pathmode="line" onclick="ed.setPathMode('line', this)" title="Straight lines between points">
+          <i class="fa-solid fa-slash"></i> Line
+        </button>
+        <button class="effect-btn" data-pathmode="smooth" onclick="ed.setPathMode('smooth', this)" title="Smooth curves (Bézier)">
+          <i class="fa-solid fa-wave-square"></i> Smooth
+        </button>
+        <button class="effect-btn" data-pathmode="pixel" onclick="ed.setPathMode('pixel', this)" title="Pixel-art lines (Bresenham)">
+          <i class="fa-solid fa-brush"></i> Pixel
+        </button>
+      </div>
+      <p class="text-[9px] text-emerald-300 text-center mt-1 font-mono">
+        Left click: add point • Right click: apply • Esc: cancel
+      </p>
     </div>
 
     <!-- SLIDERS -->
@@ -1184,6 +1207,11 @@ const ed = {
   lassoPoints: [],         // array de { x, y } — pontos do polígono em construção
   lassoClosed: false,      // true quando o polígono foi fechado (virou seleção)
   lassoHovering: null,     // { x, y } — posição atual do mouse (linha de preview)
+
+  // Path Brush state (traço pontilhado que aplica com botão direito)
+  pathPoints: [],          // array de { x, y } — pontos do caminho em construção
+  pathHovering: null,      // { x, y } — posição do mouse (preview da linha até o próximo ponto)
+  pathMode: 'line',        // 'line' | 'smooth' | 'pixel'
   isFloatingMove: false,
   floatBuffer: null,
   floatOffsetX: 0,
@@ -1927,8 +1955,9 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     // Ferramentas que PRESERVAM a seleção ativa (agem dentro dela):
     //  - bucket (preenche dentro do Rect/Ellipse/Lasso)
     //  - wand (apaga dentro do Rect/Ellipse/Lasso)
-    // Essas duas NÃO devem desmarcar a seleção, senão perdem a "área útil".
-    const KEEP_SELECTION_TOOLS = ['bucket', 'wand'];
+    //  - path (Path Brush — pinta por cima, mas pode ser limitado pela seleção)
+    // Essas NÃO devem desmarcar a seleção, senão perdem a "área útil".
+    const KEEP_SELECTION_TOOLS = ['bucket', 'wand', 'path'];
 
     if (this.tool !== t) {
       // Se estava em rotate/grab, cancela antes de trocar
@@ -1965,10 +1994,21 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     const textOpts = document.getElementById('textOptions');
     textOpts.classList.toggle('hidden', t !== 'text');
 
+    // Toggle path options
+    const pathOpts = document.getElementById('pathOptions');
+    if (pathOpts) pathOpts.classList.toggle('hidden', t !== 'path');
+
+    // Se saiu do Path, limpa os pontos em construção
+    if (t !== 'path') {
+      this.pathPoints = [];
+      this.pathHovering = null;
+    }
+
     // Cursor
     if (t === 'move') this.canvas.style.cursor = 'move';
     else if (t === 'picker') this.canvas.style.cursor = 'copy';
     else if (t === 'text') this.canvas.style.cursor = 'text';
+    else if (t === 'path') this.canvas.style.cursor = 'crosshair';
     else this.canvas.style.cursor = 'crosshair';
 
     // ⭐ MOVE MODE: clone do Rect. Ao clicar, cria uma seleção 64×64
@@ -2211,6 +2251,52 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         this.overlayCtx.arc(first.x + 0.5, first.y + 0.5, 2.5, 0, Math.PI * 2);
         this.overlayCtx.stroke();
       }
+      this.overlayCtx.restore();
+    }
+
+    // ========================================================
+    // PATH PREVIEW (traço pontilhado na cor ativa + linha até o mouse)
+    // ========================================================
+    if (this.tool === 'path' && this.pathPoints.length > 0) {
+      const color = this.activeColor;
+
+      // 1) Rasteriza o caminho atual pra desenhar o preview preenchido
+      const pixels = this._rasterizePath();
+      this.overlayCtx.save();
+      this.overlayCtx.globalAlpha = 0.7;   // semi-transparente pra você ver por baixo
+      this.overlayCtx.fillStyle = color;
+      for (const p of pixels) {
+        if (p.x < 0 || p.x >= SIZE || p.y < 0 || p.y >= SIZE) continue;
+        this.overlayCtx.fillRect(p.x, p.y, 1, 1);
+      }
+      this.overlayCtx.restore();
+
+      // 2) Linha tracejada do último ponto até o mouse (indica o próximo segmento)
+      if (this.pathHovering) {
+        const last = this.pathPoints[this.pathPoints.length - 1];
+        this.overlayCtx.save();
+        this.overlayCtx.strokeStyle = color;
+        this.overlayCtx.lineWidth = 0.5;
+        this.overlayCtx.setLineDash([2, 2]);
+        this.overlayCtx.beginPath();
+        this.overlayCtx.moveTo(last.x + 0.5, last.y + 0.5);
+        this.overlayCtx.lineTo(this.pathHovering.x + 0.5, this.pathHovering.y + 0.5);
+        this.overlayCtx.stroke();
+        this.overlayCtx.restore();
+      }
+
+      // 3) Pontinhos de vértice na cor ativa
+      this.overlayCtx.save();
+      this.overlayCtx.fillStyle = color;
+      this.overlayCtx.strokeStyle = '#ffffff';
+      this.overlayCtx.lineWidth = 0.4;
+      this.pathPoints.forEach((pt, i) => {
+        const r = (i === 0) ? 1.3 : 0.9;
+        this.overlayCtx.beginPath();
+        this.overlayCtx.arc(pt.x + 0.5, pt.y + 0.5, r, 0, Math.PI * 2);
+        this.overlayCtx.fill();
+        this.overlayCtx.stroke();
+      });
       this.overlayCtx.restore();
     }
   },
@@ -3695,6 +3781,122 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   },
 
   // =====================================================================
+  // PATH BRUSH (traço pontilhado que aplica com botão direito)
+  // =====================================================================
+  setPathMode(mode, btn) {
+    this.pathMode = mode;
+    document.querySelectorAll('[data-pathmode]').forEach(b => {
+      b.classList.toggle('active', b.dataset.pathmode === mode);
+    });
+    this.drawOverlay();   // redesenha preview do path (se houver pontos)
+  },
+
+  // Aplica o caminho no grid, usando a cor ativa + brush settings.
+  // O algoritmo depende do pathMode (line / smooth / pixel).
+  applyPath() {
+    if (this.isPlaying) return;
+    if (!this.pathPoints || this.pathPoints.length < 2) {
+      this.flash('Add at least 2 points (left click) before applying');
+      return;
+    }
+
+    this.pushUndo('path brush');
+
+    // Gera uma lista de pontos (pixels) que formam o caminho
+    const pixels = this._rasterizePath();
+
+    // Pinta cada pixel usando o brush (size/opacity/effect)
+    for (const p of pixels) {
+      if (p.x < 0 || p.x >= SIZE || p.y < 0 || p.y >= SIZE) continue;
+      if (!this.isInsideSelection(p.x, p.y)) continue;
+      // Usa o drawBrush pra respeitar Size/Opacity/Effect + mirror
+      this.drawBrush(p.x, p.y);
+    }
+
+    // Limpa os pontos (pronto pra novo traço)
+    this.pathPoints = [];
+    this.pathHovering = null;
+
+    this.buildFramesList();
+    this.draw();
+    this.drawOverlay();
+    this.flash('✎ Path applied');
+  },
+
+  // Cancela o traço em construção (Esc)
+  cancelPath() {
+    if (this.pathPoints && this.pathPoints.length > 0) {
+      this.pathPoints = [];
+      this.pathHovering = null;
+      this.drawOverlay();
+      this.flash('✕ Path cancelled');
+    }
+  },
+
+  // Converte pathPoints numa lista de pixels conforme o modo.
+  //  - line:   segmentos retos entre pontos consecutivos (Bresenham)
+  //  - pixel:  idem (mesmo algoritmo do brush)
+  //  - smooth: interpolação Catmull-Rom (curvas suaves)
+  _rasterizePath() {
+    const pts = this.pathPoints;
+    if (!pts || pts.length < 2) return [];
+
+    const out = [];
+    const seen = new Set();
+    const pushUnique = (x, y) => {
+      const k = y * SIZE + x;
+      if (!seen.has(k)) { seen.add(k); out.push({ x, y }); }
+    };
+
+    if (this.pathMode === 'smooth' && pts.length >= 3) {
+      // Catmull-Rom: interpola entre cada par de pontos, gerando
+      // pontos suaves. Adiciona pontos fantasmas no início/fim pra
+      // a curva começar/terminar nos pontos reais.
+      const P = [
+        pts[0],
+        ...pts,
+        pts[pts.length - 1]
+      ];
+      const STEPS = 12;   // quantos sub-pontos por segmento
+      for (let i = 1; i < P.length - 2; i++) {
+        const p0 = P[i - 1], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2];
+        for (let t = 0; t <= STEPS; t++) {
+          const tt = t / STEPS;
+          const t2 = tt * tt;
+          const t3 = t2 * tt;
+          const x = 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * tt +
+                           (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+                           (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3);
+          const y = 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * tt +
+                           (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+                           (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3);
+          pushUnique(Math.round(x), Math.round(y));
+        }
+      }
+    } else {
+      // line / pixel: linha reta entre cada par (Bresenham)
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        let x0 = a.x, y0 = a.y;
+        const x1 = b.x, y1 = b.y;
+        const dx = Math.abs(x1 - x0);
+        const dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        while (true) {
+          pushUnique(x0, y0);
+          if (x0 === x1 && y0 === y1) break;
+          const e2 = 2 * err;
+          if (e2 > -dy) { err -= dy; x0 += sx; }
+          if (e2 < dx) { err += dx; y0 += sy; }
+        }
+      }
+    }
+    return out;
+  },
+
+  // =====================================================================
   // MOUSE
   // =====================================================================
   bindCanvas() {
@@ -3742,6 +3944,24 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       const { cx, cy } = getCoords(e);
       document.getElementById('posInfo').textContent = `${cx},${cy}`;
       if (cx < 0 || cx >= SIZE || cy < 0 || cy >= SIZE) return;
+
+      // TOOL: PATH — clique esquerdo adiciona ponto, direito aplica
+      if (this.tool === 'path') {
+        if (e.button === 2) {
+          // Botão direito → aplica o caminho
+          this.applyPath();
+          return;
+        }
+        if (e.button === 0) {
+          // Botão esquerdo → adiciona ponto
+          this.pathPoints.push({ x: cx, y: cy });
+          this.pathHovering = { x: cx, y: cy };
+          this.flash(`Path: ${this.pathPoints.length} point(s) — right-click to apply`);
+          this.drawOverlay();
+          return;
+        }
+        return;
+      }
 
       // Right-click = erase (any tool)
       if (e.button === 2) {
@@ -3888,6 +4108,13 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       // Lasso: atualiza a linha de preview até o mouse
       if (this.tool === 'lasso' && !this.lassoClosed && this.lassoPoints.length > 0) {
         this.lassoHovering = { x: cx, y: cy };
+        this.drawOverlay();
+        return;
+      }
+
+      // Path: atualiza a linha de preview até o mouse
+      if (this.tool === 'path' && this.pathPoints.length > 0) {
+        this.pathHovering = { x: cx, y: cy };
         this.drawOverlay();
         return;
       }
@@ -4068,7 +4295,9 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         return;
       }
       if (e.key === 'Escape') {
-        if (this.isFloatingMove) {
+        if (this.tool === 'path' && this.pathPoints.length > 0) {
+          this.cancelPath();
+        } else if (this.isFloatingMove) {
           this.cancelFloatMove();
         } else if (this.grabMode) {
           this.cancelGrabMode();
@@ -4121,7 +4350,7 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       const map = {
         'b': 'brush', 'e': 'eraser', 'g': 'bucket', 'w': 'wand',
         'i': 'picker', 'm': 'rect', 'o': 'ellipse', 'l': 'lasso',
-        'v': 'move', 't': 'text'
+        'v': 'move', 't': 'text', 'p': 'path'
       };
       const t = map[e.key.toLowerCase()];
       if (t) {

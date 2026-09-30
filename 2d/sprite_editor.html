@@ -4175,14 +4175,25 @@ const imp = {
   },
 
   // Converte posição no canvas pra posição na grid 64x64
+  // AGORA: a grade 64×64 corresponde EXATAMENTE à moldura quadrada
+  // central (mesma que o capture usa). Assim a pintura fica alinhada
+  // com a imagem importada, que também é capturada relativa à moldura.
   canvasToGrid(cx, cy) {
-    // O que a "grade 64x64" representa é a área visível do canvas
-    // Dividida em 64x64 células
-    const cellW = this.canvas.width / this.gridSize;
-    const cellH = this.canvas.height / this.gridSize;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const frameSize = Math.min(W, H);
+    const frameX = (W - frameSize) / 2;
+    const frameY = (H - frameSize) / 2;
+
+    // Relativo ao início da moldura
+    const relX = cx - frameX;
+    const relY = cy - frameY;
+
+    // Célula da grade dentro da moldura
+    const cell = frameSize / this.gridSize;
     return {
-      gx: Math.floor(cx / cellW),
-      gy: Math.floor(cy / cellH)
+      gx: Math.floor(relX / cell),
+      gy: Math.floor(relY / cell)
     };
   },
 
@@ -4362,15 +4373,24 @@ const imp = {
       this.ctx.globalAlpha = 1;
     }
 
-    // Desenha a pintura (grid 64x64 esticada pra viewport)
-    const cellW = W / 64;
-    const cellH = H / 64;
+    // Desenha a pintura (grid 64x64) DENTRO da moldura central.
+    // Antes era esticada pelo canvas todo; agora usa o mesmo
+    // sistema da imagem → pintura e imagem ficam alinhadas.
+    const _frameSize = Math.min(W, H);
+    const _frameX = (W - _frameSize) / 2;
+    const _frameY = (H - _frameSize) / 2;
+    const _cell = _frameSize / 64;
     for (let y = 0; y < 64; y++) {
       for (let x = 0; x < 64; x++) {
         const c = this.grid[y][x];
         if (!c) continue;
         this.ctx.fillStyle = c;
-        this.ctx.fillRect(x * cellW, y * cellH, cellW, cellH);
+        this.ctx.fillRect(
+          _frameX + x * _cell,
+          _frameY + y * _cell,
+          _cell,
+          _cell
+        );
       }
     }
 

@@ -1190,6 +1190,11 @@ const ed = {
   floatOffsetY: 0,
   floatStartMouseX: 0,
   floatStartMouseY: 0,
+  // Move tool (drag): usa a TEORIA DO GRAB — guarda os pixels que
+  // saem da borda num buffer 64×64, e só descarta no commit.
+  moveDragBuffer: null,       // grid 64×64 com os pixels (posição original)
+  moveDragBackground: null,   // grid 64×64 sem a seleção (resto do frame)
+  moveDragOriginalRect: null, // rect original da seleção (pra restaurar se cancelar)
   clipboardBuffer: null,
   frameClipboard: null,   // { _grid, _opacity, _from } — frame inteiro copiado
   multiSelected: [],      // índices de frames marcados via Shift+clique
@@ -1941,10 +1946,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         this.lassoHovering = null;
       }
 
-      // Commit float move se estiver rodando
-      if (this.isFloatingMove) {
-        this.commitFloatMove();
-      }
+      // (Move agora é clone do Rect — o commit é implícito no
+      // clearSelection() logo abaixo, que respeita a máscara.)
 
       // ✅ Só desmarca a seleção se a ferramenta nova NÃO for bucket/wand.
       // Bucket e Wand preservam a seleção pra agir DENTRO dela.
@@ -1968,8 +1971,95 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     else if (t === 'text') this.canvas.style.cursor = 'text';
     else this.canvas.style.cursor = 'crosshair';
 
+    // ⭐ MOVE MODE: clone do Rect. Ao clicar, cria uma seleção 64×64
+    // (tela cheia). Dali em diante, funciona IGUAL ao Rect:
+    //   - Arrastar com o mouse = faz nova seleção (retângulo)
+    //   - Setas = move o conteúdo da seleção
+    //   - Trocar de ferramenta = commit (pixels fora somem)
+    // Nada de float move, nada de buffer especial.
+    if (t === 'move') {
+      this.selection = {
+        type: 'rect',
+        rect: { x: 0, y: 0, w: SIZE, h: SIZE }
+      };
+      this.flash('✥ Move (clone do Rect) — use ↑ ↓ ← → ou arraste');
+    }
+
     // Redesenha o overlay pra refletir o estado limpo
     this.drawOverlay();
+  },
+
+  // ==================================================================
+  // MOVE SELEÇÃO com as setas (Rect / Ellipse / Lasso)
+  // Move só o conteúdo dentro da máscara e a seleção acompanha.
+  // O resto do frame fica intacto.
+  // ==================================================================
+  // Setas em Rect/Ellipse/Lasso — usa a MESMA TEORIA DO GRAB que o
+  // Move tool: a primeira seta inicia um float move (guarda buffer +
+  // background), as seguintes só incrementam offset. Os pixels que
+  // saem da borda ficam guardados no buffer até o commit.
+  moveSelectionContent(dx, dy) {
+    if (this.isPlaying) return;
+    if (dx === 0 && dy === 0) return;
+    if (!this.selection || !this.selection.rect) return;
+
+    // Se ainda não está em float move, INICIA agora (primeira seta).
+    // Isso guarda os pixels da máscara num buffer e o resto do frame
+    // num background, sem apagar nada do grid.
+    if (!this.isFloatingMove) {
+      this.startFloatMove();
+      // A partir daqui, floatOffsetX/Y = 0. As setas só incrementam.
+    }
+
+    // Aplica o delta no offset atual (acumula com o que já tinha)
+    this.floatOffsetX += dx;
+    this.floatOffsetY += dy;
+
+    // Redesenha via renderFloatMove() — MESMA função do Move tool.
+    // Ela restaura o background + desenha o buffer com o offset,
+    // sem perder os pixels que saíram da borda.
+    this.renderFloatMove();
+
+    this.flash(`✥ Move (${this.floatOffsetX > 0 ? '+' : ''}${this.floatOffsetX}, ${this.floatOffsetY > 0 ? '+' : ''}${this.floatOffsetY})`);
+  },
+
+  // ==================================================================
+  // MOVE FRAME INTEIRO com as setas (ferramenta Move)
+  // ==================================================================
+  moveFrameContent(dx, dy) {
+    if (this.isPlaying) return;
+    if (dx === 0 && dy === 0) return;
+
+    this.pushUndo('move ' + (dx !== 0 ? (dx > 0 ? '→' : '←') : (dy > 0 ? '↓' : '↑')));
+
+    const grid = this.currentGrid;
+    const N = SIZE;
+
+    // Cria grid vazia
+    const out = Array.from({ length: N }, () => Array(N).fill(null));
+
+    // Copia pixel por pixel com offset; pixels fora da borda SOMEM (clip)
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        const color = grid[y][x];
+        if (!color) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
+        out[ny][nx] = color;
+      }
+    }
+
+    this.currentFrame._grid = out;
+
+    // Atualiza a seleção pra continuar cobrindo o frame inteiro
+    if (this.selection && this.selection.type === 'rect') {
+      this.selection.rect = { x: 0, y: 0, w: SIZE, h: SIZE };
+    }
+
+    this.buildFramesList();
+    this.draw();
+    this.flash(`✥ Moved (${dx > 0 ? '+' : ''}${dx}, ${dy > 0 ? '+' : ''}${dy})`);
   },
 
   // =====================================================================
@@ -2053,7 +2143,9 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       let ry = this.selection.rect ? this.selection.rect.y : 0;
       const w = this.selection.rect ? this.selection.rect.w : 0;
       const h = this.selection.rect ? this.selection.rect.h : 0;
-      if (this.isFloatingMove) { rx += this.floatOffsetX; ry += this.floatOffsetY; }
+      // No Move tool a seleção.rect JÁ está na posição deslocada
+      // (atualizada pelo renderFloatMove). Só somamos offset pros
+      // outros casos (rect/ellipse/lasso sem Move tool).
 
       if (this.selection.type === 'rect') {
         this._drawSolidRect(rx, ry, w, h, '#ffffff');
@@ -2580,7 +2672,9 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
   clearSelection() {
     if (this.isFloatingMove) this.commitFloatMove();
     this.isFloatingMove = false;
-    this.floatBuffer = null;
+    this.moveDragBuffer = null;
+    this.moveDragBackground = null;
+    this.moveDragOriginalRect = null;
     this.floatOffsetX = 0;
     this.floatOffsetY = 0;
     this.selection = null;
@@ -3433,72 +3527,168 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.flash('✕ Grab cancelled — back to rotate');
   },
 
+  // Move tool: mesma TEORIA DO GRAB (tecla G).
+  // Guarda os pixels da seleção num buffer 64×64 (na posição original),
+  // e o resto do frame num background. A cada mousemove, restaura o
+  // background e desenha o buffer deslocado — sem perder pixels que
+  // saem da borda. Só no commit (mouseup) os que saíram somem.
   startFloatMove() {
     if (!this.selection) return;
-    const { x, y, w, h } = this.selection.rect;
-    this.isFloatingMove = true;
-    this.floatOffsetX = 0;
-    this.floatOffsetY = 0;
-    this.floatBuffer = document.createElement('canvas');
-    this.floatBuffer.width = SIZE;
-    this.floatBuffer.height = SIZE;
-    const fctx = this.floatBuffer.getContext('2d');
+    const sel = this.selection;
+    const { x, y, w, h } = sel.rect;
 
-    // Copia só os pixels DENTRO da máscara
-    for (let yy = y; yy < y + h; yy++) {
-      for (let xx = x; xx < x + w; xx++) {
-        if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
-        // ⚠️ Respeita a máscara
+    // 1) Buffer: cópia da grid inteira (guardamos TODOS os pixels da máscara)
+    const buf = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+    // 2) Background: cópia da grid com a máscara removida
+    const bg = this.currentGrid.map(row => row.slice());
+
+    for (let yy = 0; yy < SIZE; yy++) {
+      for (let xx = 0; xx < SIZE; xx++) {
         if (!this.isInsideSelection(xx, yy)) continue;
-        const color = this.currentGrid[yy][xx];
-        if (color) {
-          fctx.fillStyle = color;
-          fctx.fillRect(xx, yy, 1, 1);
-        }
+        buf[yy][xx] = this.currentGrid[yy][xx];
+        bg[yy][xx] = null;
       }
     }
 
-    // Remove só os pixels DENTRO da máscara
-    for (let yy = y; yy < y + h; yy++) {
-      for (let xx = x; xx < x + w; xx++) {
-        if (xx < 0 || xx >= SIZE || yy < 0 || yy >= SIZE) continue;
-        // ⚠️ Respeita a máscara
-        if (!this.isInsideSelection(xx, yy)) continue;
-        this.currentGrid[yy][xx] = null;
+    this.moveDragBuffer = buf;
+    this.moveDragBackground = bg;
+    this.moveDragOriginalRect = { x, y, w, h };
+
+    this.isFloatingMove = true;
+    this.floatOffsetX = 0;
+    this.floatOffsetY = 0;
+
+    // Renderiza o estado inicial (background + buffer sem offset)
+    this.renderFloatMove();
+  },
+
+  // Renderiza: background + buffer deslocado (mesma ideia do renderGrabbed)
+  renderFloatMove() {
+    if (!this.isFloatingMove) return;
+    if (!this.moveDragBuffer || !this.moveDragBackground) return;
+
+    const N = SIZE;
+    const bg = this.moveDragBackground;
+    const buf = this.moveDragBuffer;
+    const offX = this.floatOffsetX;
+    const offY = this.floatOffsetY;
+
+    // 1) Restaura background
+    for (let yy = 0; yy < N; yy++) {
+      for (let xx = 0; xx < N; xx++) {
+        this.currentGrid[yy][xx] = bg[yy][xx];
       }
+    }
+
+    // 2) Desenha buffer com offset — SÓ o que cabe na tela.
+    //    Os que saem ficam no buffer (não são perdidos!).
+    for (let yy = 0; yy < N; yy++) {
+      for (let xx = 0; xx < N; xx++) {
+        const color = buf[yy][xx];
+        if (color === null) continue;
+        const px = xx + offX;
+        const py = yy + offY;
+        if (px < 0 || px >= N || py < 0 || py >= N) continue;
+        this.currentGrid[py][px] = color;
+      }
+    }
+
+    // 3) Atualiza a posição visual da seleção (retângulo branco acompanha)
+    if (this.selection && this.moveDragOriginalRect) {
+      this.selection.rect.x = this.moveDragOriginalRect.x + offX;
+      this.selection.rect.y = this.moveDragOriginalRect.y + offY;
     }
 
     this.draw();
   },
 
+  // Commit do Move tool: aplica o offset com CLIP. Aí sim os pixels
+  // que saíram da borda são descartados.
   commitFloatMove() {
-    if (!this.isFloatingMove || !this.floatBuffer) return;
-    const fctx = this.floatBuffer.getContext('2d');
-    const imgData = fctx.getImageData(0, 0, SIZE, SIZE).data;
+    if (!this.isFloatingMove) return;
+    if (!this.moveDragBuffer || !this.moveDragBackground) {
+      // Estado inconsistente — só sai
+      this.isFloatingMove = false;
+      this.moveDragBuffer = null;
+      this.moveDragBackground = null;
+      this.moveDragOriginalRect = null;
+      return;
+    }
 
-    for (let yy = 0; yy < SIZE; yy++) {
-      for (let xx = 0; xx < SIZE; xx++) {
-        const i = (yy * SIZE + xx) * 4;
-        const a = imgData[i + 3];
-        if (a === 0) continue;
-        const dx = xx + this.floatOffsetX;
-        const dy = yy + this.floatOffsetY;
-        if (dx < 0 || dx >= SIZE || dy < 0 || dy >= SIZE) continue;
-        const r = imgData[i];
-        const g = imgData[i + 1];
-        const b = imgData[i + 2];
-        this.currentGrid[dy][dx] = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+    const N = SIZE;
+    const bg = this.moveDragBackground;
+    const buf = this.moveDragBuffer;
+    const offX = this.floatOffsetX;
+    const offY = this.floatOffsetY;
+
+    // 1) Restaura o background (sem a seleção)
+    for (let yy = 0; yy < N; yy++) {
+      for (let xx = 0; xx < N; xx++) {
+        this.currentGrid[yy][xx] = bg[yy][xx];
       }
     }
 
-    // Update selection rect position
-    if (this.selection && this.selection.type === 'rect') {
-      this.selection.rect.x += this.floatOffsetX;
-      this.selection.rect.y += this.floatOffsetY;
+    // 2) Aplica o buffer com offset — CLIP nas bordas
+    for (let yy = 0; yy < N; yy++) {
+      for (let xx = 0; xx < N; xx++) {
+        const color = buf[yy][xx];
+        if (color === null) continue;
+        const px = xx + offX;
+        const py = yy + offY;
+        if (px < 0 || px >= N || py < 0 || py >= N) continue;  // ← só aqui some
+        this.currentGrid[py][px] = color;
+      }
     }
 
+    // 3) A seleção fica na nova posição
+    if (this.selection && this.selection.type === 'rect') {
+      if (this.moveDragOriginalRect) {
+        this.selection.rect.x = this.moveDragOriginalRect.x + offX;
+        this.selection.rect.y = this.moveDragOriginalRect.y + offY;
+      } else {
+        this.selection.rect.x += offX;
+        this.selection.rect.y += offY;
+      }
+    }
+
+    // 4) Limpa estado
     this.isFloatingMove = false;
-    this.floatBuffer = null;
+    this.moveDragBuffer = null;
+    this.moveDragBackground = null;
+    this.moveDragOriginalRect = null;
+    this.floatOffsetX = 0;
+    this.floatOffsetY = 0;
+
+    this.buildFramesList();
+    this.draw();
+  },
+
+  // Cancela o Move tool e restaura tudo (útil no Esc)
+  cancelFloatMove() {
+    if (!this.isFloatingMove) return;
+    if (this.moveDragBackground) {
+      for (let yy = 0; yy < SIZE; yy++) {
+        for (let xx = 0; xx < SIZE; xx++) {
+          this.currentGrid[yy][xx] = this.moveDragBackground[yy][xx];
+        }
+      }
+    }
+    if (this.moveDragBuffer) {
+      for (let yy = 0; yy < SIZE; yy++) {
+        for (let xx = 0; xx < SIZE; xx++) {
+          const c = this.moveDragBuffer[yy][xx];
+          if (c !== null) this.currentGrid[yy][xx] = c;
+        }
+      }
+    }
+    if (this.selection && this.moveDragOriginalRect) {
+      this.selection.rect.x = this.moveDragOriginalRect.x;
+      this.selection.rect.y = this.moveDragOriginalRect.y;
+    }
+    this.isFloatingMove = false;
+    this.moveDragBuffer = null;
+    this.moveDragBackground = null;
+    this.moveDragOriginalRect = null;
     this.floatOffsetX = 0;
     this.floatOffsetY = 0;
     this.draw();
@@ -3647,18 +3837,14 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         return;
       }
 
-      // TOOL: MOVE
+      // TOOL: MOVE — é um CLONE do Rect. Só inicia uma nova seleção
+      // (arrastar pra desenhar o retângulo). Nada de float move.
       if (this.tool === 'move') {
-        if (!this.selection) {
-          this.flash('Make a selection first (Rect tool)');
-          return;
-        }
-        if (!this.isFloatingMove) {
-          this.startFloatMove();
-        }
-        this.isDrawing = true;
-        this.floatStartMouseX = cx;
-        this.floatStartMouseY = cy;
+        this.clearSelection();
+        this.isSelecting = true;
+        this.selectStart = [cx, cy];
+        this.previewPt = [cx, cy];
+        this.drawOverlay();
         return;
       }
 
@@ -3713,13 +3899,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         return;
       }
 
-      // Move floating drag
-      if (this.isDrawing && this.tool === 'move' && this.isFloatingMove) {
-        this.floatOffsetX = cx - this.floatStartMouseX;
-        this.floatOffsetY = cy - this.floatStartMouseY;
-        this.draw();
-        return;
-      }
+      // Move (clone do Rect): o drag de seleção já é tratado pelo
+      // bloco 'isSelecting' acima. Nada especial aqui.
 
       // Brush/eraser drag
       if (this.isDrawing && (this.tool === 'brush' || this.tool === 'eraser')) {
@@ -3757,12 +3938,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
         return;
       }
 
-      // Finalize move
-      if (this.isDrawing && this.tool === 'move' && this.isFloatingMove) {
-        this.isDrawing = false;
-        this.commitFloatMove();
-        return;
-      }
+      // Move (clone do Rect): o finalize da seleção já é tratado
+      // pelo bloco 'isSelecting' acima. Nada especial aqui.
 
       this.isDrawing = false;
       this.lastX = null;
@@ -3771,11 +3948,54 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
 
     canvas.addEventListener('mouseleave', () => {
       document.getElementById('posInfo').textContent = '-,-';
+      // ⚠️ Reseta TODO o estado de pintura ao sair do canvas.
+      // Sem isso, se o usuário sair com o botão apertado, o navegador
+      // NÃO dispara mouseup — e a pintura fica "presa" (isDrawing=true)
+      // fazendo o brush pintar sozinho ao voltar pra área.
+      this.isDrawing = false;
+      this.erasingRightClick = false;
+      this.lastX = null;
+      this.lastY = null;
     });
 
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       // Em rotate mode, clique direito cancela (já é tratado no mousedown)
+    });
+
+    // ⚠️ mouseup GLOBAL: se o usuário soltar o botão FORA do canvas,
+    // o canvas não recebe o mouseup. Este handler global garante que
+    // o estado de pintura sempre seja resetado, não importa onde solte.
+    document.addEventListener('mouseup', (e) => {
+      if (e.button === 0 || e.button === 2 || e.buttons === 0) {
+        this.isDrawing = false;
+        this.erasingRightClick = false;
+        this.lastX = null;
+        this.lastY = null;
+
+        // Também finaliza seleção rect/ellipse se estiver no meio
+        if (this.isSelecting && this.selectStart && this.previewPt) {
+          const [x0, y0] = this.selectStart;
+          const [x1, y1] = this.previewPt;
+          const sx = Math.min(x0, x1);
+          const sy = Math.min(y0, y1);
+          const w = Math.abs(x1 - x0) + 1;
+          const h = Math.abs(y1 - y0) + 1;
+          if (w > 0 && h > 0) {
+            const type = (this.tool === 'ellipse') ? 'ellipse' : 'rect';
+            this.selection = { type, rect: { x: sx, y: sy, w, h } };
+          }
+          this.isSelecting = false;
+          this.selectStart = null;
+          this.previewPt = null;
+          this.drawOverlay();
+        }
+
+        // Finaliza float move se estiver rodando
+        if (this.isFloatingMove && this.isDrawing === false && this.floatBuffer) {
+          // (o commit real acontece no mouseup do canvas; aqui só evitamos travar)
+        }
+      }
     });
 
     // Zoom com a rodinha do mouse (sobre o canvas)
@@ -3814,13 +4034,43 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.target.isContentEditable) return;
 
+      // ⭐ RECT / ELLIPSE / LASSO / MOVE: setas movem a SELEÇÃO
+      // (Move é clone do Rect — mesmas setas, mesmo comportamento)
+      if ((this.tool === 'rect' || this.tool === 'ellipse'
+           || this.tool === 'lasso' || this.tool === 'move')
+          && this.selection && !this.isPlaying) {
+        const step = e.shiftKey ? 8 : 1;
+        let handled = true;
+        switch (e.key) {
+          case 'ArrowUp':    this.moveSelectionContent(0, -step); break;
+          case 'ArrowDown':  this.moveSelectionContent(0,  step); break;
+          case 'ArrowLeft':  this.moveSelectionContent(-step, 0); break;
+          case 'ArrowRight': this.moveSelectionContent( step, 0); break;
+          default: handled = false;
+        }
+        if (handled) {
+          e.preventDefault();
+          return;
+        }
+      }
+
+      // ⭐ Enter: commita o float move (fixa o movimento atual)
+      if (e.key === 'Enter' && this.isFloatingMove) {
+        e.preventDefault();
+        this.commitFloatMove();
+        this.flash('✓ Move committed');
+        return;
+      }
+
       if (e.code === 'Space') {
         e.preventDefault();
         this.togglePlay();
         return;
       }
       if (e.key === 'Escape') {
-        if (this.grabMode) {
+        if (this.isFloatingMove) {
+          this.cancelFloatMove();
+        } else if (this.grabMode) {
           this.cancelGrabMode();
         } else if (this.rotateMode) {
           this.cancelRotateMode();
@@ -4516,6 +4766,16 @@ const imp = {
     canvas.addEventListener('mousemove', (e) => this.onMove(e));
     canvas.addEventListener('mouseup', () => this.onUp());
     canvas.addEventListener('mouseleave', () => this.onUp());
+
+    // ⚠️ mouseup GLOBAL pro imp: se o usuário soltar o botão fora do
+    // canvas do modal, garante que isDrawing/isPanning sejam resetados.
+    document.addEventListener('mouseup', () => {
+      const modal = document.getElementById('importModal');
+      if (!modal || modal.classList.contains('hidden')) return;
+      this.isDrawing = false;
+      this.isPanning = false;
+      if (this.canvas) this.canvas.style.cursor = 'crosshair';
+    });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
 
@@ -4644,7 +4904,9 @@ const imp = {
   onUp() {
     this.isDrawing = false;
     this.isPanning = false;
-    this.canvas.style.cursor = 'crosshair';
+    this.lastX = 0;
+    this.lastY = 0;
+    if (this.canvas) this.canvas.style.cursor = 'crosshair';
   },
 
   onWheel(e) {

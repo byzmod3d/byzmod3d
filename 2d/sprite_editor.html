@@ -340,6 +340,51 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
     border-radius: 4px;
     background: #1a1625;
   }
+
+  /* Botões de ferramenta do modal Capture & Trace */
+  .imp-tool-btn {
+    padding: 6px 4px;
+    background: #3a3350;
+    border: 2px solid transparent;
+    color: #c4b5fd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 700;
+    transition: 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    justify-content: center;
+    min-height: 46px;
+  }
+  .imp-tool-btn i { font-size: 13px; }
+  .imp-tool-btn:hover { background: #4c4463; }
+  .imp-tool-btn.active {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    border-color: #a78bfa;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(167,139,250,0.5);
+  }
+
+  /* Botões de efeito do pincel no modal */
+  .imp-effect-btn {
+    padding: 6px 4px;
+    background: #3a3350;
+    border: 1px solid transparent;
+    color: #94a3b8;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    transition: 0.15s;
+    display: flex; align-items: center; gap: 4px;
+    justify-content: center;
+  }
+  .imp-effect-btn:hover { background: #4c4463; }
+  .imp-effect-btn.active {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: #a78bfa;
+    color: #c4b5fd;
+  }
 </style>
 </head>
 <body class="h-full bg-[#1a1625] text-slate-100 flex flex-col overflow-hidden">
@@ -714,66 +759,132 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
     <!-- Import Workspace -->
     <div class="flex-1 flex overflow-hidden">
 
-      <!-- Left: Tools -->
-      <aside class="w-64 bg-[#231d33]/95 border-r border-[#3a3350] p-3 flex flex-col gap-3 overflow-y-auto scroll-thin">
+      <!-- Left: IMAGE + TOOLS + BRUSH EFFECTS + sliders + Image Opacity -->
+      <aside class="w-56 bg-[#231d33]/95 border-r border-[#3a3350] p-3 flex flex-col gap-3 overflow-y-auto scroll-thin shrink-0">
+
+        <!-- LAYERS (Image + Painting) -->
         <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Image</div>
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-layer-group text-violet-400"></i> Layers
+          </div>
+
+          <!-- Camada IMAGE -->
+          <div class="flex items-center gap-1.5 mb-1 bg-[#2a2438] rounded-md px-1.5 py-1.5 border border-[#3a3350]">
+            <i class="fa-solid fa-image text-amber-300 text-[11px] w-3 text-center"></i>
+            <span class="flex-1 text-[10px] font-semibold text-slate-200">Image</span>
+            <button id="imp-layer-image-eye"
+                    onclick="imp.toggleLayerVisibility('image')"
+                    class="w-6 h-6 rounded-md bg-[#3a3350] hover:bg-[#4c4463] text-[11px] flex items-center justify-center transition"
+                    title="Show/hide image">
+              👁️
+            </button>
+            <button onclick="imp.deleteImage()"
+                    class="w-6 h-6 rounded-md bg-[#3a3350] hover:bg-rose-700 text-[11px] flex items-center justify-center transition text-rose-300 hover:text-white"
+                    title="Delete image">
+              ✕
+            </button>
+          </div>
+
+          <!-- Camada PAINTING -->
+          <div class="flex items-center gap-1.5 mb-2 bg-[#2a2438] rounded-md px-1.5 py-1.5 border border-[#3a3350]">
+            <i class="fa-solid fa-paintbrush text-violet-300 text-[11px] w-3 text-center"></i>
+            <span class="flex-1 text-[10px] font-semibold text-slate-200">Painting</span>
+            <button id="imp-layer-paint-eye"
+                    onclick="imp.toggleLayerVisibility('painting')"
+                    class="w-6 h-6 rounded-md bg-[#3a3350] hover:bg-[#4c4463] text-[11px] flex items-center justify-center transition"
+                    title="Show/hide painting">
+              👁️
+            </button>
+            <button onclick="imp.clearPainting()"
+                    class="w-6 h-6 rounded-md bg-[#3a3350] hover:bg-rose-700 text-[11px] flex items-center justify-center transition text-rose-300 hover:text-white"
+                    title="Clear painting">
+              ✕
+            </button>
+          </div>
+
+          <!-- Load Image -->
           <label class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg cursor-pointer text-xs font-bold flex items-center justify-center gap-2 transition">
             <i class="fa-solid fa-upload"></i> Load Image
             <input type="file" id="importImgInput" accept="image/*" class="hidden" onchange="imp.loadImage(event)">
           </label>
-          <button onclick="imp.clearAll()" class="w-full mt-1.5 py-1.5 bg-[#3a3350] hover:bg-[#4c4463] border border-[#4c4463] rounded text-[10px] font-semibold text-rose-300 transition">
-            <i class="fa-solid fa-trash-can"></i> Clear All
-          </button>
         </div>
 
+        <!-- TOOLS -->
         <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
           <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Tools</div>
           <div class="grid grid-cols-2 gap-1">
-            <button onclick="imp.setTool('brush')" id="imp-tool-brush" class="vx-tool-btn active">
+            <button onclick="imp.setTool('brush')" data-imptool="brush" class="imp-tool-btn active" title="Brush">
               <i class="fa-solid fa-paintbrush"></i><span>Brush</span>
             </button>
-            <button onclick="imp.setTool('eraser')" id="imp-tool-eraser" class="vx-tool-btn">
+            <button onclick="imp.setTool('eraser')" data-imptool="eraser" class="imp-tool-btn" title="Eraser">
               <i class="fa-solid fa-eraser"></i><span>Eraser</span>
             </button>
-            <button onclick="imp.setTool('bucket')" id="imp-tool-bucket" class="vx-tool-btn">
+            <button onclick="imp.setTool('bucket')" data-imptool="bucket" class="imp-tool-btn" title="Bucket Fill">
               <i class="fa-solid fa-fill-drip"></i><span>Bucket</span>
             </button>
-            <button onclick="imp.setTool('picker')" id="imp-tool-picker" class="vx-tool-btn">
+            <button onclick="imp.setTool('wand')" data-imptool="wand" class="imp-tool-btn" title="Magic Wand (apaga por cor)">
+              <i class="fa-solid fa-wand-magic"></i><span>Wand</span>
+            </button>
+            <button onclick="imp.setTool('picker')" data-imptool="picker" class="imp-tool-btn col-span-2" title="Color Picker">
               <i class="fa-solid fa-eye-dropper"></i><span>Picker</span>
             </button>
           </div>
         </div>
 
+        <!-- BRUSH EFFECTS -->
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Brush Effects</div>
+          <div class="grid grid-cols-2 gap-1">
+            <button onclick="imp.setBrushEffect('normal', this)" data-impeffect="normal" class="imp-effect-btn active">
+              <i class="fa-solid fa-pen"></i> Normal
+            </button>
+            <button onclick="imp.setBrushEffect('spray', this)" data-impeffect="spray" class="imp-effect-btn">
+              <i class="fa-solid fa-spray-can"></i> Spray
+            </button>
+            <button onclick="imp.setBrushEffect('glow', this)" data-impeffect="glow" class="imp-effect-btn">
+              <i class="fa-solid fa-sun"></i> Glow
+            </button>
+            <button onclick="imp.setBrushEffect('texture', this)" data-impeffect="texture" class="imp-effect-btn">
+              <i class="fa-solid fa-brush"></i> Texture
+            </button>
+          </div>
+        </div>
+
+        <!-- SIZE / OPACITY / TOLERANCE -->
         <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350] space-y-2">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Image Opacity</div>
+          <div>
+            <div class="flex justify-between text-[10px] text-slate-300 mb-1">
+              <span>Size</span><strong id="imp-size-val" class="text-violet-300">1px</strong>
+            </div>
+            <input type="range" id="imp-brush-size" min="1" max="16" value="1" oninput="imp.setBrushSize(this.value)">
+          </div>
+          <div>
+            <div class="flex justify-between text-[10px] text-slate-300 mb-1">
+              <span>Opacity</span><strong id="imp-brush-opacity-val" class="text-violet-300">100%</strong>
+            </div>
+            <input type="range" id="imp-brush-opacity" min="1" max="100" value="100" oninput="imp.setBrushOpacity(this.value)">
+          </div>
+          <div>
+            <div class="flex justify-between text-[10px] text-slate-300 mb-1">
+              <span>Tolerance</span><strong id="imp-tol-val" class="text-violet-300">30</strong>
+            </div>
+            <input type="range" id="imp-tol" min="0" max="255" value="30" oninput="imp.setTolerance(this.value)">
+          </div>
+        </div>
+
+        <!-- IMAGE OPACITY (destacado em âmbar — controla a imagem de fundo) -->
+        <div class="p-2 rounded-lg border-2 border-amber-500/60 bg-amber-500/10 space-y-2">
+          <div class="flex items-center gap-1.5 text-[10px] font-bold text-amber-300 uppercase tracking-wider">
+            <i class="fa-solid fa-image"></i> Image Opacity
+          </div>
           <input type="range" id="imp-opacity" min="0" max="100" value="100" oninput="imp.setImageOpacity(this.value)" class="w-full">
-          <div class="flex justify-between text-[10px] text-slate-400">
-            <span>Background</span>
+          <div class="flex justify-between text-[10px] text-amber-200/80">
+            <span>Background image</span>
             <span id="imp-opacity-val" class="font-mono text-amber-300">100%</span>
           </div>
+          <p class="text-[9px] text-amber-200/70 leading-tight">💡 Afeta só a imagem importada, não a sua pintura</p>
         </div>
 
-        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350] space-y-2">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Brush Size</div>
-          <input type="range" id="imp-brush-size" min="1" max="8" value="1" oninput="imp.setBrushSize(this.value)" class="w-full">
-          <div class="text-center text-[10px] font-mono text-amber-300">
-            <span id="imp-brush-size-val">1px</span>
-          </div>
-        </div>
-
-        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Active Color</div>
-          <div class="flex items-center gap-2">
-            <div id="imp-active-color-preview" class="w-8 h-8 rounded border border-white/20" style="background:#ff004d;"></div>
-            <input type="color" id="imp-color-picker" value="#ff004d" onchange="imp.setActiveColor(this.value)" class="flex-1 h-8 rounded cursor-pointer border border-[#3a3350] bg-transparent">
-          </div>
-        </div>
-
-        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350] flex-1 min-h-[140px] flex flex-col">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Palette</div>
-          <div id="imp-palette" class="grid grid-cols-4 gap-1 overflow-y-auto scroll-thin"></div>
-        </div>
       </aside>
 
       <!-- Center: Canvas -->
@@ -796,8 +907,43 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
         </div>
       </main>
 
-      <!-- Right: Zoom/pan info -->
-      <aside class="w-56 bg-[#231d33]/95 border-l border-[#3a3350] p-3 flex flex-col gap-3 overflow-y-auto scroll-thin">
+      <!-- Right: cores, paleta e favoritos + Zoom/Capture -->
+      <aside class="w-64 bg-[#231d33]/95 border-l border-[#3a3350] p-3 flex flex-col gap-3 overflow-y-auto scroll-thin shrink-0">
+
+        <!-- CURRENT COLOR -->
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Current Color</div>
+          <div class="flex items-center gap-2">
+            <div id="imp-active-color-preview" class="w-8 h-8 rounded border-2 border-white/20 shrink-0" style="background:#f5c89a;"></div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[9px] text-slate-400 uppercase font-bold">Hex</div>
+              <div class="font-mono font-bold text-white text-[11px]" id="imp-active-color-hex">#F5C89A</div>
+            </div>
+            <button onclick="imp.addToFavorites()" class="px-2 py-1 bg-amber-500 hover:bg-amber-400 text-white rounded-md text-[10px] font-bold" title="Add to favorites">
+              <i class="fa-solid fa-star"></i>
+            </button>
+          </div>
+          <input type="color" id="imp-color-picker" value="#f5c89a" oninput="imp.setActiveColor(this.value)" class="w-full mt-1.5 h-8 rounded cursor-pointer border border-[#3a3350] bg-transparent">
+        </div>
+
+        <!-- PIXEL ART PALETTE -->
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pixel Art Palette</div>
+          <div id="imp-palette" class="grid grid-cols-6 gap-1"></div>
+        </div>
+
+        <!-- FAVORITES -->
+        <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350] flex-1 min-h-[100px] flex flex-col">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Favorites</div>
+            <button onclick="imp.clearFavorites()" class="text-[9px] text-slate-500 hover:text-rose-400" title="Clear all favorites">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+          <div id="imp-favorites" class="grid grid-cols-6 gap-1 overflow-y-auto scroll-thin" style="max-height:100px;"></div>
+          <p class="text-[9px] text-slate-500 mt-1 text-center">Click = use • Right-click = remove</p>
+        </div>
+
         <div class="bg-[#3a3350]/40 p-2 rounded-lg border border-[#3a3350]">
           <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Zoom</div>
           <div class="flex items-center gap-1">
@@ -3957,8 +4103,16 @@ const imp = {
 
   // Tools
   tool: 'brush',
-  activeColor: '#ff004d',
+  brushEffect: 'normal',
+  activeColor: '#f5c89a',
   brushSize: 1,
+  brushOpacity: 1,
+  tolerance: 30,
+  favorites: [],
+
+  // Layers (visibilidade)
+  imageVisible: true,
+  paintingVisible: true,
 
   // Mouse
   isDrawing: false,
@@ -3984,7 +4138,16 @@ const imp = {
     this.resizeCanvas();
     window.addEventListener('resize', () => this.resizeCanvas());
 
+    // Carrega favorites do localStorage (chave PRÓPRIA do imp —
+    // não compartilha com a aba principal)
+    try {
+      const saved = localStorage.getItem('bravosgamebr_imp_favorites');
+      if (saved) this.favorites = JSON.parse(saved);
+    } catch (e) {}
+
     this.renderPalette();
+    this.renderFavorites();
+    this.updateActiveColorUI();
     this.bindEvents();
     this.redraw();
   },
@@ -4027,6 +4190,12 @@ const imp = {
     this.zoom = 1;
     this.panX = 0;
     this.panY = 0;
+    this.imageVisible = true;
+    this.paintingVisible = true;
+    const ie = document.getElementById('imp-layer-image-eye');
+    if (ie) { ie.textContent = '👁️'; ie.classList.remove('bg-rose-900/60'); }
+    const pe = document.getElementById('imp-layer-paint-eye');
+    if (pe) { pe.textContent = '👁️'; pe.classList.remove('bg-rose-900/60'); }
     document.getElementById('imp-status').textContent = 'No image loaded • Click "Load Image"';
     this.updateZoomLabel();
     this.redraw();
@@ -4096,35 +4265,239 @@ const imp = {
 
   setBrushSize(val) {
     this.brushSize = parseInt(val);
-    document.getElementById('imp-brush-size-val').textContent = this.brushSize + 'px';
+    const el = document.getElementById('imp-size-val');
+    if (el) el.textContent = this.brushSize + 'px';
   },
 
   setTool(t) {
     this.tool = t;
-    ['brush', 'eraser', 'bucket', 'picker'].forEach(name => {
-      const btn = document.getElementById(`imp-tool-${name}`);
-      if (btn) btn.classList.toggle('active', name === t);
+    document.querySelectorAll('.imp-tool-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.imptool === t);
     });
   },
 
   setActiveColor(hex) {
+    if (!hex) return;
+    // Aceita "#rrggbb" e "rgba(...)"
+    if (!hex.startsWith('#') && !hex.startsWith('rgba') && !hex.startsWith('rgb')) {
+      hex = '#' + hex;
+    }
     this.activeColor = hex;
+    this.updateActiveColorUI();
+  },
+
+  updateActiveColorUI() {
     const p = document.getElementById('imp-active-color-preview');
-    if (p) p.style.background = hex;
+    if (p) p.style.background = this.activeColor;
+    const h = document.getElementById('imp-active-color-hex');
+    if (h) {
+      // Se for rgba, mostra o RGB (o color picker não aceita alpha)
+      if (this.activeColor.startsWith('#')) {
+        h.textContent = this.activeColor.toUpperCase();
+      } else {
+        const rgb = this._hexToRgb(this.activeColor);
+        h.textContent = '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+      }
+    }
     const i = document.getElementById('imp-color-picker');
-    if (i) i.value = hex;
+    if (i) {
+      if (this.activeColor.startsWith('#')) {
+        i.value = this.activeColor;
+      } else {
+        const rgb = this._hexToRgb(this.activeColor);
+        i.value = '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
+      }
+    }
+  },
+
+  setBrushOpacity(val) {
+    this.brushOpacity = parseInt(val) / 100;
+    const el = document.getElementById('imp-brush-opacity-val');
+    if (el) el.textContent = val + '%';
+  },
+
+  setBrushEffect(effect, btn) {
+    this.brushEffect = effect;
+    document.querySelectorAll('.imp-effect-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.impeffect === effect);
+    });
+  },
+
+  // =====================================================================
+  // LAYERS
+  // =====================================================================
+  toggleLayerVisibility(which) {
+    if (which === 'image') {
+      this.imageVisible = !this.imageVisible;
+      const btn = document.getElementById('imp-layer-image-eye');
+      if (btn) {
+        btn.textContent = this.imageVisible ? '👁️' : '🚫';
+        btn.classList.toggle('bg-rose-900/60', !this.imageVisible);
+      }
+    } else if (which === 'painting') {
+      this.paintingVisible = !this.paintingVisible;
+      const btn = document.getElementById('imp-layer-paint-eye');
+      if (btn) {
+        btn.textContent = this.paintingVisible ? '👁️' : '🚫';
+        btn.classList.toggle('bg-rose-900/60', !this.paintingVisible);
+      }
+    }
+    this.redraw();
+  },
+
+  // ✕ da camada Image: apaga só a imagem (mantém a pintura)
+  deleteImage() {
+    if (!this.image) {
+      ed.flash && ed.flash('Nenhuma imagem carregada');
+      return;
+    }
+    if (!confirm('Delete the reference image? (your painting stays)')) return;
+    this.image = null;
+    this.imageVisible = true;
+    const btn = document.getElementById('imp-layer-image-eye');
+    if (btn) {
+      btn.textContent = '👁️';
+      btn.classList.remove('bg-rose-900/60');
+    }
+    const st = document.getElementById('imp-status');
+    if (st) st.textContent = 'No image loaded • Click "Load Image"';
+    this.redraw();
+  },
+
+  // ✕ da camada Painting: apaga só a pintura (mantém a imagem)
+  clearPainting() {
+    if (!confirm('Clear ALL painting? (the image stays)')) return;
+    this.grid = Array.from({ length: 64 }, () => Array(64).fill(null));
+    this.paintingVisible = true;
+    const btn = document.getElementById('imp-layer-paint-eye');
+    if (btn) {
+      btn.textContent = '👁️';
+      btn.classList.remove('bg-rose-900/60');
+    }
+    this.redraw();
+  },
+
+  // Alpha compositing CORRETO (source-over), igual à aba principal.
+  //  - alpha >= 1          → pinta direto (hex sólido)
+  //  - pixel vazio + < 1   → guarda rgba() semi-transparente
+  //  - pixel com cor       → mistura source-over respeitando alpha do dst
+  _blendPixel(gx, gy, hex, alpha) {
+    if (gx < 0 || gx >= 64 || gy < 0 || gy >= 64) return;
+    if (alpha <= 0) return;
+    if (alpha >= 1) { this.grid[gy][gx] = hex; return; }
+
+    const existing = this.grid[gy][gx];
+    if (!existing) {
+      // Sem cor de fundo: guarda rgba() com alpha embutido
+      // → o canvas respeita a transparência ao desenhar
+      this.grid[gy][gx] = this._hexToRgba(hex, alpha);
+      return;
+    }
+
+    // Parseia origem e destino (aceita "#rrggbb" e "rgba(r,g,b,a)")
+    const src = this._parseColor(hex);
+    const dst = this._parseColor(existing);
+
+    // Alpha final (source-over): outA = aSrc + aDst * (1 - aSrc)
+    const outA = alpha + dst.a * (1 - alpha);
+    if (outA <= 0) { this.grid[gy][gx] = null; return; }
+
+    const mix = (s, d) => Math.round((s * alpha + d * dst.a * (1 - alpha)) / outA);
+    const r = mix(src.r, dst.r);
+    const g = mix(src.g, dst.g);
+    const b = mix(src.b, dst.b);
+
+    if (outA >= 0.999) {
+      this.grid[gy][gx] = '#' + [r, g, b]
+        .map(v => v.toString(16).padStart(2, '0')).join('');
+    } else {
+      this.grid[gy][gx] = `rgba(${r},${g},${b},${outA.toFixed(3)})`;
+    }
+  },
+
+  // Converte hex + alpha em string rgba()
+  _hexToRgba(hex, alpha) {
+    const [r, g, b] = this._hexToRgb(hex);
+    return `rgba(${r},${g},${b},${alpha})`;
+  },
+
+  // Aceita "#rrggbb" ou "rgba(r,g,b,a)" e devolve {r,g,b,a}
+  _parseColor(c) {
+    if (!c) return { r: 0, g: 0, b: 0, a: 0 };
+    if (c.startsWith('#')) {
+      const n = parseInt(c.slice(1), 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 1 };
+    }
+    const m = c.match(/rgba?\(([^)]+)\)/);
+    if (m) {
+      const p = m[1].split(',').map(v => parseFloat(v.trim()));
+      return { r: p[0] | 0, g: p[1] | 0, b: p[2] | 0, a: p[3] ?? 1 };
+    }
+    return { r: 0, g: 0, b: 0, a: 0 };
+  },
+
+  setTolerance(val) {
+    this.tolerance = parseInt(val);
+    const el = document.getElementById('imp-tol-val');
+    if (el) el.textContent = val;
+  },
+
+  addToFavorites() {
+    const hex = this.activeColor;
+    if (!hex) return;
+    if (!this.favorites.includes(hex)) {
+      this.favorites.unshift(hex);
+      if (this.favorites.length > 48) this.favorites.pop();
+      localStorage.setItem('bravosgamebr_imp_favorites', JSON.stringify(this.favorites));
+      this.renderFavorites();
+    }
+  },
+
+  removeFavorite(hex, e) {
+    e.preventDefault();
+    this.favorites = this.favorites.filter(c => c !== hex);
+    localStorage.setItem('bravosgamebr_imp_favorites', JSON.stringify(this.favorites));
+    this.renderFavorites();
+  },
+
+  clearFavorites() {
+    if (!confirm('Clear all favorites?')) return;
+    this.favorites = [];
+    localStorage.setItem('bravosgamebr_imp_favorites', JSON.stringify(this.favorites));
+    this.renderFavorites();
+  },
+
+  renderFavorites() {
+    const c = document.getElementById('imp-favorites');
+    if (!c) return;
+    c.innerHTML = '';
+    if (this.favorites.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'col-span-6 text-center text-[9px] text-slate-500 py-2';
+      empty.textContent = 'No favorites yet.';
+      c.appendChild(empty);
+      return;
+    }
+    this.favorites.forEach(hex => {
+      const el = document.createElement('div');
+      el.className = 'palette-swatch';
+      el.style.background = hex;
+      el.title = hex + ' (right-click to remove)';
+      el.onclick = () => this.setActiveColor(hex);
+      el.oncontextmenu = (e) => this.removeFavorite(hex, e);
+      c.appendChild(el);
+    });
   },
 
   renderPalette() {
     const c = document.getElementById('imp-palette');
     if (!c) return;
     c.innerHTML = '';
-    // Paleta PICO-8 embutida (não depende mais de IMP_PALETTE global)
+    // Mesmas 24 cores da aba principal (mas estado é independente)
     const paletteColors = [
-      '#000000','#1D2B53','#7E2553','#008751',
-      '#AB5236','#5F574F','#C2C3C7','#FFF1E8',
-      '#FF004D','#FFA300','#FFEC27','#00E436',
-      '#29ADFF','#83769C','#FF77A8','#FFCCAA'
+      '#000000','#ffffff','#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff',
+      '#880000','#008800','#000088','#888800','#880088','#008888','#cccccc','#888888',
+      '#ff8800','#8800ff','#00ff88','#ff0088','#88ff00','#0088ff','#554433','#ccaa88'
     ];
     paletteColors.forEach(color => {
       const el = document.createElement('div');
@@ -4226,6 +4599,20 @@ const imp = {
       return;
     }
 
+    // Wand: aplica no clique e não arrasta
+    if (this.tool === 'wand') {
+      this.magicWand(gx, gy);
+      this.redraw();
+      return;
+    }
+
+    // Bucket: aplica no clique e não arrasta
+    if (this.tool === 'bucket') {
+      this.floodFill(gx, gy, false);
+      this.redraw();
+      return;
+    }
+
     this.isDrawing = true;
     this.lastX = gx;
     this.lastY = gy;
@@ -4284,25 +4671,71 @@ const imp = {
     if (this.tool === 'eraser') {
       this.grid[gy][gx] = null;
     } else if (this.tool === 'bucket') {
-      this.floodFill(gx, gy);
-    } else {
-      // Brush
-      const half = Math.floor(this.brushSize / 2);
-      for (let dy = -half; dy < this.brushSize - half; dy++) {
-        for (let dx = -half; dx < this.brushSize - half; dx++) {
-          const nx = gx + dx, ny = gy + dy;
-          if (nx < 0 || nx >= 64 || ny < 0 || ny >= 64) continue;
-          this.grid[ny][nx] = this.activeColor;
-        }
-      }
+      this.floodFill(gx, gy, false);
+    } else if (this.tool === 'wand') {
+      this.magicWand(gx, gy);
+    } else if (this.tool === 'brush') {
+      // Aplica o efeito de brush escolhido (normal / spray / glow / texture)
+      const fn = {
+        normal:  this._brushNormal,
+        spray:   this._brushSpray,
+        glow:    this._brushGlow,
+        texture: this._brushTexture,
+      }[this.brushEffect] || this._brushNormal;
+      fn.call(this, gx, gy);
     }
     this.redraw();
   },
 
-  floodFill(sx, sy) {
+  _brushNormal(gx, gy) {
+    const half = Math.floor(this.brushSize / 2);
+    for (let dy = -half; dy < this.brushSize - half; dy++) {
+      for (let dx = -half; dx < this.brushSize - half; dx++) {
+        this._blendPixel(gx + dx, gy + dy, this.activeColor, this.brushOpacity);
+      }
+    }
+  },
+
+  _brushSpray(gx, gy) {
+    const density = Math.max(5, this.brushSize * 2);
+    for (let i = 0; i < density; i++) {
+      const ox = (Math.random() - 0.5) * this.brushSize * 2;
+      const oy = (Math.random() - 0.5) * this.brushSize * 2;
+      if (ox * ox + oy * oy <= this.brushSize * this.brushSize) {
+        this._blendPixel(Math.round(gx + ox), Math.round(gy + oy),
+                         this.activeColor, this.brushOpacity);
+      }
+    }
+  },
+
+  _brushGlow(gx, gy) {
+    const halo = Math.max(2, this.brushSize);
+    for (let dy = -halo; dy <= halo; dy++) {
+      for (let dx = -halo; dx <= halo; dx++) {
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d > this.brushSize) continue;
+        const falloff = Math.max(0.15, 1 - (d / this.brushSize));
+        const alpha = falloff * this.brushOpacity;
+        this._blendPixel(gx + dx, gy + dy, this.activeColor, alpha);
+      }
+    }
+  },
+
+  _brushTexture(gx, gy) {
+    const count = Math.floor(this.brushSize / 2) + 2;
+    for (let i = 0; i < count; i++) {
+      const rx = Math.round(gx + (Math.random() - 0.5) * this.brushSize);
+      const ry = Math.round(gy + (Math.random() - 0.5) * this.brushSize);
+      this._blendPixel(rx, ry, this.activeColor, this.brushOpacity);
+    }
+  },
+
+  floodFill(sx, sy, replace) {
     const target = this.grid[sy][sx];
-    const fill = this.activeColor;
-    if (target === fill) return;
+    const fill = replace ? null : this.activeColor;
+
+    if (!replace && target === fill) return;
+    if (replace && !target) return;
 
     const stack = [[sx, sy]];
     const visited = new Set();
@@ -4312,10 +4745,65 @@ const imp = {
       const k = y * 64 + x;
       if (visited.has(k)) continue;
       visited.add(k);
-      if (this.grid[y][x] !== target) continue;
+
+      const cur = this.grid[y][x];
+      // Match por cor com tolerância (aceita rgba())
+      let matches;
+      if (!target) matches = !cur;
+      else matches = cur && this._colorMatches(cur, target);
+      if (!matches) continue;
+
       this.grid[y][x] = fill;
       stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
     }
+  },
+
+  // Magic Wand: apaga flood fill por cor/tolerância
+  magicWand(sx, sy) {
+    const target = this.grid[sy][sx];
+    if (!target) return;
+
+    const stack = [[sx, sy]];
+    const visited = new Set();
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= 64 || y < 0 || y >= 64) continue;
+      const k = y * 64 + x;
+      if (visited.has(k)) continue;
+      visited.add(k);
+
+      const cur = this.grid[y][x];
+      if (!cur) continue;
+      // Compara por tolerância (RGB)
+      if (!this._colorMatches(cur, target)) continue;
+
+      this.grid[y][x] = null;
+      stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+    }
+  },
+
+  // Compara 2 cores com tolerância (soma de |dr|+|dg|+|db|).
+  // Aceita "#rrggbb" e "rgba()" — ignora o alpha na comparação.
+  _colorMatches(c1, c2) {
+    if (!c1 || !c2) return c1 === c2;
+    const a = this._hexToRgb(c1);
+    const b = this._hexToRgb(c2);
+    return Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]) + Math.abs(a[2]-b[2]) <= this.tolerance;
+  },
+
+  _hexToRgb(hex) {
+    if (!hex) return [0,0,0];
+    // Aceita "#rrggbb" e "rgba(r,g,b,a)" (retorna só o RGB)
+    if (hex.startsWith('#')) {
+      const n = parseInt(hex.slice(1), 16);
+      return [(n>>16)&255, (n>>8)&255, n&255];
+    }
+    const m = hex.match(/rgba?\(([^)]+)\)/);
+    if (m) {
+      const p = m[1].split(',').map(v => parseFloat(v.trim()));
+      return [p[0] | 0, p[1] | 0, p[2] | 0];
+    }
+    return [0,0,0];
   },
 
   lineTo(x0, y0, x1, y1) {
@@ -4337,8 +4825,15 @@ const imp = {
     // Lê o pixel da imagem renderizada no canvas
     const pixel = this.ctx.getImageData(cx, cy, 1, 1).data;
     if (pixel[3] < 10) return;
-    const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(v => v.toString(16).padStart(2, '0')).join('');
-    this.setActiveColor(hex);
+    // Se o pixel tem alpha < 255, devolve rgba() (mantém transparência)
+    if (pixel[3] < 250) {
+      this.setActiveColor(
+        `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${(pixel[3] / 255).toFixed(3)})`
+      );
+    } else {
+      const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+      this.setActiveColor(hex);
+    }
   },
 
   // Mantido por compatibilidade (não é mais chamado pela UI)
@@ -4360,8 +4855,8 @@ const imp = {
     // Fundo xadrez (transparência)
     this.drawCheckerboard();
 
-    // Desenha imagem de referência (mesmo esquema do capture)
-    if (this.image) {
+    // Desenha imagem de referência (respeitando visibilidade da layer)
+    if (this.image && this.imageVisible) {
       this.ctx.globalAlpha = this.imgOpacity;
       this.ctx.imageSmoothingEnabled = false;
       this.ctx.drawImage(
@@ -4373,24 +4868,25 @@ const imp = {
       this.ctx.globalAlpha = 1;
     }
 
-    // Desenha a pintura (grid 64x64) DENTRO da moldura central.
-    // Antes era esticada pelo canvas todo; agora usa o mesmo
-    // sistema da imagem → pintura e imagem ficam alinhadas.
-    const _frameSize = Math.min(W, H);
-    const _frameX = (W - _frameSize) / 2;
-    const _frameY = (H - _frameSize) / 2;
-    const _cell = _frameSize / 64;
-    for (let y = 0; y < 64; y++) {
-      for (let x = 0; x < 64; x++) {
-        const c = this.grid[y][x];
-        if (!c) continue;
-        this.ctx.fillStyle = c;
-        this.ctx.fillRect(
-          _frameX + x * _cell,
-          _frameY + y * _cell,
-          _cell,
-          _cell
-        );
+    // Desenha a pintura (grid 64x64) DENTRO da moldura central,
+    // respeitando a visibilidade da layer Painting.
+    if (this.paintingVisible) {
+      const _frameSize = Math.min(W, H);
+      const _frameX = (W - _frameSize) / 2;
+      const _frameY = (H - _frameSize) / 2;
+      const _cell = _frameSize / 64;
+      for (let y = 0; y < 64; y++) {
+        for (let x = 0; x < 64; x++) {
+          const c = this.grid[y][x];
+          if (!c) continue;
+          this.ctx.fillStyle = c;
+          this.ctx.fillRect(
+            _frameX + x * _cell,
+            _frameY + y * _cell,
+            _cell,
+            _cell
+          );
+        }
       }
     }
 
@@ -4561,7 +5057,8 @@ ed.captureImportTo2D = function() {
     const frameToSprite = 64 / frameSize;
 
     // 1) Desenha a IMAGEM limitando ao quadrado central da moldura
-    if (imp.image) {
+    //    (só se a layer Image estiver visível)
+    if (imp.image && imp.imageVisible) {
       tctx.save();
       // Clip no quadrado 64×64 do destino (garante que nada "vaza")
       tctx.beginPath();
@@ -4588,12 +5085,15 @@ ed.captureImportTo2D = function() {
     }
 
     // 2) Desenha a PINTURA do usuário por cima (também limitada à moldura)
-    for (let y = 0; y < 64; y++) {
-      for (let x = 0; x < 64; x++) {
-        const c = imp.grid[y][x];
-        if (!c) continue;
-        tctx.fillStyle = c;
-        tctx.fillRect(x, y, 1, 1);
+    //    (só se a layer Painting estiver visível)
+    if (imp.paintingVisible) {
+      for (let y = 0; y < 64; y++) {
+        for (let x = 0; x < 64; x++) {
+          const c = imp.grid[y][x];
+          if (!c) continue;
+          tctx.fillStyle = c;
+          tctx.fillRect(x, y, 1, 1);
+        }
       }
     }
 

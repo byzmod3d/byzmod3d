@@ -680,6 +680,33 @@ tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['
         <button class="effect-btn" data-pathmode="pixel" onclick="ed.setPathMode('pixel', this)" title="Pixel-art lines (Bresenham)">
           <i class="fa-solid fa-brush"></i> Pixel
         </button>
+        <button class="effect-btn" data-pathmode="dotted" onclick="ed.setPathMode('dotted', this)" title="Dotted line (paint 1, skip 1)">
+          <i class="fa-solid fa-ellipsis"></i> Dotted
+        </button>
+        <button class="effect-btn" data-pathmode="dashed" onclick="ed.setPathMode('dashed', this)" title="Dashed line (paint 3, skip 2)">
+          <i class="fa-solid fa-minus"></i> Dashed
+        </button>
+        <button class="effect-btn" data-pathmode="double" onclick="ed.setPathMode('double', this)" title="Two parallel lines with 1px gap">
+          <i class="fa-solid fa-equals"></i> Double
+        </button>
+        <button class="effect-btn" data-pathmode="taper" onclick="ed.setPathMode('taper', this)" title="Tapered line (thick → thin)">
+          <i class="fa-solid fa-feather"></i> Taper
+        </button>
+        <button class="effect-btn" data-pathmode="zigzag" onclick="ed.setPathMode('zigzag', this)" title="Zigzag pattern along the path">
+          <i class="fa-solid fa-bolt"></i> Zigzag
+        </button>
+        <button class="effect-btn" data-pathmode="wavy" onclick="ed.setPathMode('wavy', this)" title="Wavy line (sine wave)">
+          <i class="fa-solid fa-water"></i> Wavy
+        </button>
+        <button class="effect-btn" data-pathmode="shadow" onclick="ed.setPathMode('shadow', this)" title="Line with an offset shadow">
+          <i class="fa-solid fa-clone"></i> Shadow
+        </button>
+        <button class="effect-btn" data-pathmode="outline" onclick="ed.setPathMode('outline', this)" title="Hollow outline (line with empty middle)">
+          <i class="fa-solid fa-circle-notch"></i> Outline
+        </button>
+        <button class="effect-btn" data-pathmode="ribbon" onclick="ed.setPathMode('ribbon', this)" title="Ribbon (wavy with variable thickness)">
+          <i class="fa-solid fa-ribbon"></i> Ribbon
+        </button>
       </div>
       <p class="text-[9px] text-emerald-300 text-center mt-1 font-mono">
         Left click: add point • Right click: apply • Esc: cancel
@@ -2264,12 +2291,14 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       const pixels = this._rasterizePath();
       this.overlayCtx.save();
       this.overlayCtx.fillStyle = color;
-      const isAA = (this.pathMode === 'line');
+      const useAlpha = (this.pathMode === 'line' ||
+                        this.pathMode === 'shadow' ||
+                        this.pathMode === 'taper');
       for (const p of pixels) {
         if (p.x < 0 || p.x >= SIZE || p.y < 0 || p.y >= SIZE) continue;
-        // No modo Line, usa o alpha individual (anti-alias);
-        // nos outros, 0.7 pra ver o grid por baixo.
-        this.overlayCtx.globalAlpha = isAA ? (p.a ?? 1) : 0.7;
+        // Modos com alpha individual mostram a suavidade real.
+        // Os outros ficam em 0.7 pra você ver o grid por baixo.
+        this.overlayCtx.globalAlpha = useAlpha ? (p.a ?? 1) : 0.7;
         this.overlayCtx.fillRect(p.x, p.y, 1, 1);
       }
       this.overlayCtx.restore();
@@ -3809,18 +3838,19 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
     this.pushUndo('path brush');
 
     const pixels = this._rasterizePath();
-    const isAA = (this.pathMode === 'line');
+    // Modos que usam alpha individual (blendPixel) — AA, Shadow, Taper.
+    // Os outros passam pelo drawBrush (Bresenham duro, respeita size/effect).
+    const useAlpha = (this.pathMode === 'line' ||
+                      this.pathMode === 'shadow' ||
+                      this.pathMode === 'taper');
 
     for (const p of pixels) {
       if (p.x < 0 || p.x >= SIZE || p.y < 0 || p.y >= SIZE) continue;
       if (!this.isInsideSelection(p.x, p.y)) continue;
 
-      if (isAA) {
-        // Anti-alias: usa o alpha individual de cada pixel.
-        // Combina com a brushOpacity do painel (se quiser mais fraco).
+      if (useAlpha) {
         const a = (p.a ?? 1) * this.brushOpacity;
         this.blendPixel(p.x, p.y, this.activeColor, a);
-        // Aplica mirror (se ativo) com o mesmo alpha
         if (this.mirrorH) {
           const mx = Math.floor(SIZE - 1 - p.x);
           this.blendPixel(mx, p.y, this.activeColor, a);
@@ -3835,7 +3865,8 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
           this.blendPixel(mx, my, this.activeColor, a);
         }
       } else {
-        // Pixel / Smooth: usa o drawBrush normal (respeita size/effect/mirror)
+        // Duros: Pixel, Smooth, Dotted, Dashed, Double, Zigzag, Wavy,
+        // Outline, Ribbon — passam pelo drawBrush (respeita size/effect/mirror)
         this.drawBrush(p.x, p.y);
       }
     }
@@ -3880,6 +3911,252 @@ All selected frames will be combined (top-first), and the originals removed.`)) 
       return out;
     }
 
+    // =========================================================
+    // NOVOS MODOS (adicionados sem tocar nos antigos)
+    // =========================================================
+
+    // Helper: gera a lista de pontos Bresenham (duro) entre cada par.
+    const bresenhamPoints = () => {
+      const out = [];
+      const seen = new Set();
+      const push = (x, y) => {
+        const k = y * SIZE + x;
+        if (!seen.has(k)) { seen.add(k); out.push({ x, y, a: 1 }); }
+      };
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        let x0 = a.x, y0 = a.y;
+        const x1 = b.x, y1 = b.y;
+        const dx = Math.abs(x1 - x0);
+        const dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        while (true) {
+          push(x0, y0);
+          if (x0 === x1 && y0 === y1) break;
+          const e2 = 2 * err;
+          if (e2 > -dy) { err -= dy; x0 += sx; }
+          if (e2 < dx) { err += dx; y0 += sy; }
+        }
+      }
+      return out;
+    };
+
+    // DOTTED: pinta 1, pula 1 (usa a lista Bresenham, filtra por índice par)
+    if (this.pathMode === 'dotted') {
+      const all = bresenhamPoints();
+      return all.filter((_, i) => i % 2 === 0);
+    }
+
+    // DASHED: pinta 3, pula 2
+    if (this.pathMode === 'dashed') {
+      const all = bresenhamPoints();
+      return all.filter((_, i) => (i % 5) < 3);
+    }
+
+    // DOUBLE: duas linhas paralelas com 1px de espaço.
+    // Estratégia: pega a lista Bresenham e desenha o pixel + offset
+    // perpendicular (depende da direção do traço).
+    if (this.pathMode === 'double') {
+      const out = [];
+      const seen = new Set();
+      const push = (x, y) => {
+        const k = y * SIZE + x;
+        if (!seen.has(k)) { seen.add(k); out.push({ x, y, a: 1 }); }
+      };
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1;
+        // perpendicular unitário
+        const px = -dy / len;
+        const py = dx / len;
+        let x0 = a.x, y0 = a.y;
+        const x1 = b.x, y1 = b.y;
+        const adx = Math.abs(x1 - x0), ady = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let err = adx - ady;
+        while (true) {
+          push(x0, y0);
+          push(Math.round(x0 + px * 2), Math.round(y0 + py * 2));
+          if (x0 === x1 && y0 === y1) break;
+          const e2 = 2 * err;
+          if (e2 > -ady) { err -= ady; x0 += sx; }
+          if (e2 < adx) { err += adx; y0 += sy; }
+        }
+      }
+      return out;
+    }
+
+    // TAPER: linha afilada (grosso no início, fino no fim).
+    // Desenha com espessura decrescente baseada na posição no caminho.
+    if (this.pathMode === 'taper') {
+      const out = [];
+      const seen = new Set();
+      const push = (x, y, a) => {
+        const k = y * SIZE + x;
+        if (!seen.has(k)) { seen.add(k); out.push({ x, y, a: a ?? 1 }); }
+      };
+      // Lista plana de pontos Bresenham primeiro (pra saber posição no caminho)
+      const all = bresenhamPoints();
+      const total = all.length;
+      // Espessura máxima = brushSize (mínimo 2 pra ver o taper)
+      const maxW = Math.max(2, this.brushSize);
+      for (let i = 0; i < all.length; i++) {
+        const p = all[i];
+        const t = i / Math.max(1, total - 1);  // 0..1
+        // Espessura cai curvada: começa em maxW, termina em 1
+        const w = Math.max(1, Math.round(maxW * Math.pow(1 - t, 1.5)));
+        const half = Math.floor(w / 2);
+        for (let dy = -half; dy <= half; dy++) {
+          for (let dx = -half; dx <= half; dx++) {
+            push(p.x + dx, p.y + dy, 1);
+          }
+        }
+      }
+      return out;
+    }
+
+    // ZIGZAG: alterna a cada passo um desvio perpendicular (+2 / -2)
+    if (this.pathMode === 'zigzag') {
+      const out = [];
+      const seen = new Set();
+      const push = (x, y) => {
+        const k = y * SIZE + x;
+        if (!seen.has(k)) { seen.add(k); out.push({ x, y, a: 1 }); }
+      };
+      const all = bresenhamPoints();
+      // Percorre os segmentos originais pra ter perpendicular correta
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const px = -dy / len;
+        const py = dx / len;
+        let x0 = a.x, y0 = a.y;
+        const x1 = b.x, y1 = b.y;
+        const adx = Math.abs(x1 - x0), ady = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let err = adx - ady;
+        let step = 0;
+        while (true) {
+          const side = (step % 4 < 2) ? 1 : -1;
+          push(x0, y0);
+          push(Math.round(x0 + px * 2 * side), Math.round(y0 + py * 2 * side));
+          step++;
+          if (x0 === x1 && y0 === y1) break;
+          const e2 = 2 * err;
+          if (e2 > -ady) { err -= ady; x0 += sx; }
+          if (e2 < adx) { err += adx; y0 += sy; }
+        }
+      }
+      return out;
+    }
+
+    // WAVY: seno em volta da linha (amplitude 2px, onda 8px)
+    if (this.pathMode === 'wavy') {
+      const out = [];
+      const seen = new Set();
+      const push = (x, y) => {
+        const k = y * SIZE + x;
+        if (!seen.has(k)) { seen.add(k); out.push({ x, y, a: 1 }); }
+      };
+      const all = bresenhamPoints();
+      const AMP = 2;   // amplitude em pixels
+      const WAVE = 8;  // comprimento de onda
+      // Direção geral do caminho (pra perpendicular)
+      const firstP = pts[0], lastP = pts[pts.length - 1];
+      const gdx = lastP.x - firstP.x;
+      const gdy = lastP.y - firstP.y;
+      const glen = Math.hypot(gdx, gdy) || 1;
+      const perpX = -gdy / glen;
+      const perpY = gdx / glen;
+      for (let i = 0; i < all.length; i++) {
+        const p = all[i];
+        const wave = Math.sin((i / WAVE) * Math.PI * 2) * AMP;
+        push(Math.round(p.x + perpX * wave), Math.round(p.y + perpY * wave));
+      }
+      return out;
+    }
+
+    // SHADOW: linha + cópia offset (2px baixo/direita) com alpha 0.5
+    if (this.pathMode === 'shadow') {
+      const out = [];
+      const seen = new Set();
+      const push = (x, y, a) => {
+        const k = y * SIZE + x;
+        if (!seen.has(k)) { seen.add(k); out.push({ x, y, a }); }
+      };
+      const all = bresenhamPoints();
+      // Sombra primeiro (offset 2,2 com alpha 0.5)
+      for (const p of all) push(p.x + 2, p.y + 2, 0.5);
+      // Linha por cima (alpha 1)
+      for (const p of all) push(p.x, p.y, 1);
+      return out;
+    }
+
+    // OUTLINE: contorno oco (linha com 3px de espessura mas buraco no meio)
+    if (this.pathMode === 'outline') {
+      const out = [];
+      const seen = new Set();
+      const push = (x, y) => {
+        const k = y * SIZE + x;
+        if (!seen.has(k)) { seen.add(k); out.push({ x, y, a: 1 }); }
+      };
+      const all = bresenhamPoints();
+      // Pra cada ponto, desenha os 8 vizinhos MENOS o próprio ponto
+      // (vira um "contorno" de 1px em volta de cada pixel do caminho)
+      for (const p of all) {
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;   // pula o centro
+            push(p.x + dx, p.y + dy);
+          }
+        }
+      }
+      return out;
+    }
+
+    // RIBBON: fita ondulada com espessura variável (2..4 px)
+    if (this.pathMode === 'ribbon') {
+      const out = [];
+      const seen = new Set();
+      const push = (x, y) => {
+        const k = y * SIZE + x;
+        if (!seen.has(k)) { seen.add(k); out.push({ x, y, a: 1 }); }
+      };
+      const all = bresenhamPoints();
+      const firstP = pts[0], lastP = pts[pts.length - 1];
+      const gdx = lastP.x - firstP.x;
+      const gdy = lastP.y - firstP.y;
+      const glen = Math.hypot(gdx, gdy) || 1;
+      const perpX = -gdy / glen;
+      const perpY = gdx / glen;
+      const AMP = 2;
+      const WAVE = 10;
+      for (let i = 0; i < all.length; i++) {
+        const p = all[i];
+        const wave = Math.sin((i / WAVE) * Math.PI * 2) * AMP;
+        // Espessura varia com o cosseno (2..4)
+        const thick = Math.max(2, Math.round(2 + Math.cos((i / WAVE) * Math.PI * 2) * 1.5));
+        const cx = p.x + perpX * wave;
+        const cy = p.y + perpY * wave;
+        const half = Math.floor(thick / 2);
+        for (let dy = -half; dy <= half; dy++) {
+          for (let dx = -half; dx <= half; dx++) {
+            push(Math.round(cx + dx), Math.round(cy + dy));
+          }
+        }
+      }
+      return out;
+    }
+
+    // =========================================================
+    // MODOS ANTIGOS (line / smooth / pixel) — INTOCADOS
+    // =========================================================
     if (this.pathMode === 'smooth' && pts.length >= 3) {
       // Catmull-Rom → lista de pontos "duros" (alpha 1)
       const out = [];

@@ -1,96 +1,67 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BravosGamebr — Character Studio & Pixel Editor</title>
-<meta name="description" content="A free offline pixel art editor and character animation studio. Multi-direction sprites, onion skin, onion layers, pixel-perfect tools. Available for Windows and Linux.">
-<meta name="keywords" content="pixel art, sprite editor, character animation, game dev, pixel editor, 2d animation, tileset editor">
-<meta property="og:title" content="BravosGamebr — Character Studio & Pixel Editor">
-<meta property="og:description" content="A free offline pixel art editor and character animation studio.">
+<title>BGPE — BravosGamebr Pixel Editor</title>
+<meta name="description" content="A free, offline pixel art editor and character animation studio. Portable for Windows and Linux.">
+<meta property="og:title" content="BGPE — BravosGamebr Pixel Editor">
+<meta property="og:description" content="A free, offline pixel art editor and character animation studio.">
 <meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%238b5cf6'/><rect x='16' y='20' width='8' height='8' fill='%23fff'/><rect x='28' y='20' width='8' height='8' fill='%23fff'/><rect x='40' y='20' width='8' height='8' fill='%23fff'/><rect x='16' y='32' width='8' height='8' fill='%23fff'/><rect x='40' y='32' width='8' height='8' fill='%23fff'/><rect x='16' y='44' width='32' height='8' fill='%23fff'/></svg>">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%238b5cf6'/%3E%3Crect x='16' y='16' width='10' height='10' fill='%23fff'/%3E%3Crect x='28' y='16' width='10' height='10' fill='%23fff'/%3E%3Crect x='40' y='16' width='10' height='10' fill='%23fff'/%3E%3Crect x='16' y='28' width='10' height='10' fill='%23fff'/%3E%3Crect x='40' y='28' width='10' height='10' fill='%23fff'/%3E%3Crect x='16' y='40' width='34' height='10' fill='%23fbbf24'/%3E%3C/svg%3E">
 <style>
-  /* ============================================================
-     RESET + BASE
-     ============================================================ */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #120e1c;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0f0a1e;
     color: #e2e8f0;
-    line-height: 1.6;
+    line-height: 1.65;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
   a { color: inherit; text-decoration: none; }
   img, svg { display: block; max-width: 100%; }
 
-  /* ============================================================
-     VARIÁVEIS DE TEMA (mesma paleta do editor)
-     ============================================================ */
   :root {
-    --bg-deep:    #0a0612;
-    --bg-main:    #1a1625;
-    --bg-panel:   #231d33;
+    --bg-deep: #0a0612;
+    --bg-main: #1a1625;
+    --bg-panel: #231d33;
     --bg-panel-2: #2a2438;
-    --bg-panel-3: #3a3350;
-    --border:     #3a3350;
-    --border-2:   #4c4463;
-
+    --border: #3a3350;
+    --border-2: #4c4463;
     --violet-300: #c4b5fd;
     --violet-400: #a78bfa;
     --violet-500: #8b5cf6;
     --violet-600: #7c3aed;
     --violet-700: #6d28d9;
-
     --fuchsia-400: #e879f9;
     --fuchsia-500: #d946ef;
-
     --emerald-400: #34d399;
     --emerald-500: #10b981;
-
-    --amber-400:  #fbbf24;
-    --amber-500:  #f59e0b;
-
-    --cyan-400:   #22d3ee;
-    --cyan-500:   #06b6d4;
-
-    --rose-500:   #f43f5e;
-
-    --slate-100:  #e2e8f0;
-    --slate-300:  #cbd5e1;
-    --slate-400:  #94a3b8;
-    --slate-500:  #64748b;
-    --slate-600:  #475569;
+    --amber-400: #fbbf24;
+    --amber-500: #f59e0b;
+    --cyan-400: #22d3ee;
+    --cyan-500: #06b6d4;
+    --slate-300: #cbd5e1;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-600: #475569;
   }
 
-  /* ============================================================
-     LAYOUT
-     ============================================================ */
-  .container {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-  .section {
-    padding: 88px 0;
-    position: relative;
-  }
+  .container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+  .section { padding: 88px 0; }
   .section-tight { padding: 56px 0; }
 
-  /* ============================================================
-     HERO
-     ============================================================ */
+  /* ===== HERO ===== */
   .hero {
     position: relative;
-    padding: 96px 0 80px;
+    padding: 80px 0 72px;
     text-align: center;
     background:
-      radial-gradient(ellipse at top, rgba(139, 92, 246, 0.15) 0%, transparent 55%),
-      radial-gradient(ellipse at bottom right, rgba(217, 70, 239, 0.10) 0%, transparent 50%),
-      #120e1c;
+      radial-gradient(ellipse at top, rgba(139, 92, 246, 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse at bottom right, rgba(217, 70, 239, 0.12) 0%, transparent 50%),
+      #0f0a1e;
     overflow: hidden;
   }
   .hero::before {
@@ -98,240 +69,274 @@
     position: absolute;
     inset: 0;
     background-image:
-      linear-gradient(rgba(139, 92, 246, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(139, 92, 246, 0.06) 1px, transparent 1px);
+      linear-gradient(rgba(139, 92, 246, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139, 92, 246, 0.07) 1px, transparent 1px);
     background-size: 48px 48px;
-    mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
-    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse at center, black 25%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 70%);
     pointer-events: none;
     z-index: 0;
   }
   .hero > * { position: relative; z-index: 1; }
 
   .logo-mark {
-    width: 88px;
-    height: 88px;
+    width: 96px; height: 96px;
     margin: 0 auto 24px;
-    border-radius: 22px;
-    background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow:
-      0 20px 60px rgba(139, 92, 246, 0.5),
-      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-    position: relative;
+    animation: float 4s ease-in-out infinite;
   }
-  .logo-mark::before {
-    content: '';
-    position: absolute;
-    inset: 4px;
-    border-radius: 18px;
-    background-image:
-      linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%),
-      linear-gradient(-45deg, rgba(255,255,255,0.15) 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.15) 75%),
-      linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.15) 75%);
-    background-size: 8px 8px;
-    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
-    opacity: 0.4;
-  }
-  .logo-mark svg {
-    position: relative;
-    z-index: 1;
-    width: 52px;
-    height: 52px;
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
   }
 
   .hero h1 {
-    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-size: clamp(2.25rem, 5.5vw, 3.75rem);
     font-weight: 900;
-    letter-spacing: -0.02em;
-    background: linear-gradient(135deg, #ffffff 0%, #c4b5fd 50%, #e879f9 100%);
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #ffffff 0%, #c4b5fd 45%, #e879f9 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 12px;
-    line-height: 1.15;
+    line-height: 1.1;
   }
   .hero .subtitle {
-    font-size: clamp(1rem, 2vw, 1.25rem);
+    font-size: clamp(1rem, 2vw, 1.2rem);
     color: var(--violet-300);
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     margin-bottom: 24px;
-    letter-spacing: 0.02em;
   }
   .hero .tagline {
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: var(--slate-400);
-    max-width: 620px;
-    margin: 0 auto 40px;
+    max-width: 640px;
+    margin: 0 auto 36px;
     line-height: 1.7;
   }
 
-  /* ============================================================
-     BADGES
-     ============================================================ */
   .badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 40px;
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center; margin-bottom: 40px;
   }
   .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    display: inline-flex; align-items: center; gap: 6px;
     padding: 6px 14px;
     background: rgba(139, 92, 246, 0.12);
     border: 1px solid rgba(167, 139, 250, 0.3);
     border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-size: 0.75rem; font-weight: 800;
     color: var(--violet-300);
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
+    letter-spacing: 0.06em; text-transform: uppercase;
   }
   .badge .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
+    width: 6px; height: 6px; border-radius: 50%;
     background: var(--emerald-400);
     box-shadow: 0 0 8px var(--emerald-400);
   }
 
-  /* ============================================================
-     BOTÕES DE DOWNLOAD
-     ============================================================ */
+  /* ===== DOWNLOAD BUTTONS ===== */
   .download-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
-    max-width: 760px;
-    margin: 0 auto 20px;
+    gap: 18px;
+    max-width: 740px; margin: 0 auto 20px;
   }
   .download-card {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 22px 24px;
+    display: flex; align-items: center; gap: 16px;
+    padding: 20px 22px;
     background: linear-gradient(135deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%);
     border: 1px solid var(--border);
     border-radius: 16px;
     transition: all 0.2s ease;
     cursor: pointer;
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
   }
   .download-card::before {
     content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, transparent, rgba(139, 92, 246, 0.15));
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(139, 92, 246, 0.2));
+    opacity: 0; transition: opacity 0.2s ease;
   }
   .download-card:hover {
     transform: translateY(-3px);
     border-color: var(--violet-400);
-    box-shadow: 0 20px 40px rgba(139, 92, 246, 0.25);
+    box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
   }
   .download-card:hover::before { opacity: 1; }
   .download-card > * { position: relative; z-index: 1; }
   .download-card .os-icon {
-    width: 52px;
-    height: 52px;
-    flex-shrink: 0;
+    width: 50px; height: 50px; flex-shrink: 0;
     border-radius: 12px;
     background: linear-gradient(135deg, var(--violet-500), var(--violet-700));
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
   }
   .download-card.win .os-icon {
     background: linear-gradient(135deg, #06b6d4, #0891b2);
     box-shadow: 0 8px 20px rgba(6, 182, 212, 0.4);
   }
+  .download-card .os-icon svg { width: 26px; height: 26px; }
   .download-card .os-info { flex: 1; text-align: left; }
   .download-card .os-name {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #fff;
-    margin-bottom: 2px;
+    font-size: 1.05rem; font-weight: 800; color: #fff; margin-bottom: 2px;
   }
   .download-card .os-meta {
-    font-size: 0.8rem;
-    color: var(--slate-400);
-    font-weight: 500;
+    font-size: 0.78rem; color: var(--slate-400); font-weight: 500;
   }
   .download-card .dl-icon {
-    color: var(--violet-300);
-    opacity: 0.7;
+    color: var(--violet-300); opacity: 0.7;
     transition: transform 0.2s ease, opacity 0.2s ease;
+    width: 22px; height: 22px;
   }
   .download-card:hover .dl-icon {
-    transform: translateX(4px);
-    opacity: 1;
+    transform: translateX(4px); opacity: 1;
   }
 
   .download-note {
-    text-align: center;
-    font-size: 0.85rem;
-    color: var(--slate-500);
-    max-width: 500px;
-    margin: 0 auto;
+    text-align: center; font-size: 0.82rem;
+    color: var(--slate-500); max-width: 560px; margin: 0 auto;
   }
   .download-note strong { color: var(--violet-300); }
+  .download-note a { color: var(--violet-400); font-weight: 700; }
+  .download-note a:hover { color: var(--violet-300); }
 
-  /* ============================================================
-     SECTION HEADERS
-     ============================================================ */
+  /* ===== SECTION HEADERS ===== */
   .section-label {
     display: inline-block;
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
+    font-size: 0.72rem; font-weight: 800;
+    letter-spacing: 0.16em; text-transform: uppercase;
     color: var(--violet-400);
-    margin-bottom: 12px;
-    padding: 4px 12px;
+    margin-bottom: 12px; padding: 4px 12px;
     background: rgba(139, 92, 246, 0.12);
     border: 1px solid rgba(167, 139, 250, 0.25);
     border-radius: 999px;
   }
   .section-title {
     font-size: clamp(1.5rem, 3.5vw, 2.25rem);
-    font-weight: 900;
-    color: #fff;
-    margin-bottom: 12px;
-    letter-spacing: -0.02em;
-    line-height: 1.2;
+    font-weight: 900; color: #fff;
+    margin-bottom: 12px; letter-spacing: -0.02em; line-height: 1.2;
   }
   .section-subtitle {
-    font-size: 1rem;
-    color: var(--slate-400);
-    max-width: 640px;
-    margin: 0 auto 56px;
-    text-align: center;
+    font-size: 1rem; color: var(--slate-400);
+    max-width: 640px; margin: 0 auto 56px; text-align: center;
   }
   .section-header { text-align: center; margin-bottom: 56px; }
 
-  /* ============================================================
-     FEATURE GRID (Getting Started)
-     ============================================================ */
+  /* ===== EDITOR MOCKUP ===== */
+  .mockup-wrap {
+    max-width: 900px; margin: 0 auto;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(217, 70, 239, 0.15));
+    padding: 2px;
+    box-shadow: 0 30px 80px rgba(139, 92, 246, 0.35);
+  }
+  .mockup {
+    border-radius: 14px;
+    background: #120e1c;
+    overflow: hidden;
+  }
+  .mockup-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: #231d33;
+    border-bottom: 1px solid var(--border);
+  }
+  .mockup-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .mockup-dot.red { background: #ef4444; }
+  .mockup-dot.yellow { background: #fbbf24; }
+  .mockup-dot.green { background: #10b981; }
+  .mockup-title {
+    font-size: 0.75rem; color: var(--slate-400);
+    margin-left: 12px; font-family: monospace;
+  }
+  .mockup-body {
+    display: grid;
+    grid-template-columns: 180px 1fr 200px;
+    gap: 0;
+    min-height: 340px;
+  }
+  .mockup-panel {
+    padding: 12px;
+    background: #1a1625;
+    border-right: 1px solid var(--border);
+  }
+  .mockup-panel.right { border-right: none; border-left: 1px solid var(--border); }
+  .mockup-panel-title {
+    font-size: 0.65rem; font-weight: 800;
+    color: var(--slate-500); text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 8px;
+  }
+  .mockup-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px; margin-bottom: 4px;
+    background: #2a2438;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.7rem; font-weight: 700;
+    color: var(--violet-300);
+  }
+  .mockup-btn.active {
+    background: linear-gradient(135deg, var(--violet-500), var(--violet-700));
+    border-color: var(--violet-400);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+  }
+  .mockup-canvas {
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    background: #120e1c;
+  }
+  .mockup-sprite {
+    width: 120px; height: 120px;
+    image-rendering: pixelated;
+    background:
+      linear-gradient(45deg, #2e2a3d 25%, transparent 25%),
+      linear-gradient(-45deg, #2e2a3d 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #2e2a3d 75%),
+      linear-gradient(-45deg, transparent 75%, #2e2a3d 75%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    border-radius: 8px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mockup-sprite::after {
+    content: '';
+    position: absolute;
+    inset: 20%;
+    background-image:
+      linear-gradient(#f5c89a 0%, #f5c89a 100%),
+      radial-gradient(circle at 40% 30%, #1a1a2e 8%, transparent 8%),
+      radial-gradient(circle at 60% 30%, #1a1a2e 8%, transparent 8%),
+      linear-gradient(#ee3a88 0%, #ee3a88 100%),
+      linear-gradient(#3ae2ee 0%, #3ae2ee 100%);
+    background-size: 60% 25%, 100% 100%, 100% 100%, 80% 20%, 80% 10%;
+    background-position: center 15%, 0 0, 0 0, center 60%, center 85%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    border-radius: 2px;
+  }
+  .mockup-swatch {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px;
+    margin-bottom: 12px;
+  }
+  .mockup-swatch span {
+    aspect-ratio: 1; border-radius: 4px;
+  }
+
+  /* ===== STEPS / GETTING STARTED ===== */
   .steps-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 18px;
   }
   .step-card {
-    padding: 28px 24px;
+    padding: 26px 22px;
     background: var(--bg-panel);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    position: relative;
+    border-radius: 14px;
     transition: all 0.2s ease;
   }
   .step-card:hover {
@@ -340,29 +345,18 @@
     box-shadow: 0 20px 40px rgba(0,0,0,0.3);
   }
   .step-num {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 34px; height: 34px; border-radius: 10px;
     background: linear-gradient(135deg, var(--violet-500), var(--violet-700));
-    color: #fff;
-    font-weight: 900;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
+    color: #fff; font-weight: 900; font-size: 0.95rem;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
     box-shadow: 0 8px 20px rgba(139, 92, 246, 0.35);
   }
   .step-card h3 {
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: #fff;
-    margin-bottom: 8px;
+    font-size: 1.05rem; font-weight: 800; color: #fff; margin-bottom: 8px;
   }
   .step-card p {
-    font-size: 0.9rem;
-    color: var(--slate-400);
-    line-height: 1.6;
+    font-size: 0.87rem; color: var(--slate-400); line-height: 1.6;
   }
   .step-card code {
     display: inline-block;
@@ -371,27 +365,22 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     font-family: 'Courier New', monospace;
-    font-size: 0.85em;
-    color: var(--amber-400);
+    font-size: 0.82em; color: var(--amber-400);
     margin: 2px 0;
   }
 
-  /* ============================================================
-     TOOLS GRID
-     ============================================================ */
+  /* ===== TOOLS ===== */
   .tools-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
   }
   .tool-card {
-    padding: 22px 20px;
+    padding: 20px 18px;
     background: var(--bg-panel);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
+    border-radius: 12px;
+    display: flex; gap: 12px; align-items: flex-start;
     transition: all 0.2s ease;
   }
   .tool-card:hover {
@@ -399,99 +388,67 @@
     background: var(--bg-panel-2);
   }
   .tool-icon {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
+    width: 42px; height: 42px; flex-shrink: 0;
     border-radius: 10px;
     background: rgba(139, 92, 246, 0.15);
     border: 1px solid rgba(167, 139, 250, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     color: var(--violet-300);
   }
   .tool-icon svg {
-    width: 22px;
-    height: 22px;
-    stroke: currentColor;
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+    width: 22px; height: 22px;
+    stroke: currentColor; fill: none; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
   }
   .tool-info h3 {
-    font-size: 0.98rem;
-    font-weight: 800;
-    color: #fff;
+    font-size: 0.95rem; font-weight: 800; color: #fff;
     margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: flex; align-items: center; gap: 8px;
   }
   .tool-info h3 .key {
-    font-size: 0.65rem;
-    font-weight: 800;
+    font-size: 0.62rem; font-weight: 800;
     padding: 2px 6px;
     background: var(--bg-deep);
     border: 1px solid var(--border-2);
     border-radius: 4px;
     color: var(--amber-400);
     font-family: 'Courier New', monospace;
-    letter-spacing: 0;
   }
   .tool-info p {
-    font-size: 0.85rem;
-    color: var(--slate-400);
-    line-height: 1.55;
+    font-size: 0.82rem; color: var(--slate-400); line-height: 1.55;
   }
 
-  /* ============================================================
-     TRANSFORM CARDS (R/G/S)
-     ============================================================ */
+  /* ===== TRANSFORMS ===== */
   .transform-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
   }
   .transform-card {
-    padding: 28px;
+    padding: 26px;
     background: linear-gradient(135deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%);
     border: 2px solid var(--border);
-    border-radius: 18px;
-    position: relative;
-    overflow: hidden;
+    border-radius: 16px;
+    position: relative; overflow: hidden;
   }
   .transform-card::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
     background: linear-gradient(90deg, var(--violet-500), var(--fuchsia-500));
   }
   .transform-card.g { background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), var(--bg-panel)); }
   .transform-card.g::before { background: linear-gradient(90deg, var(--emerald-500), var(--cyan-500)); }
   .transform-card.s { background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), var(--bg-panel)); }
-  .transform-card.s::before { background: linear-gradient(90deg, var(--amber-500), var(--rose-500)); }
+  .transform-card.s::before { background: linear-gradient(90deg, var(--amber-500), #f43f5e); }
 
   .transform-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
   }
   .transform-key {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 46px; height: 46px; border-radius: 12px;
     background: linear-gradient(135deg, var(--violet-500), var(--violet-700));
-    color: #fff;
-    font-weight: 900;
-    font-size: 1.4rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    color: #fff; font-weight: 900; font-size: 1.35rem;
+    display: flex; align-items: center; justify-content: center;
     box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
     font-family: 'Courier New', monospace;
   }
@@ -504,57 +461,36 @@
     box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
   }
   .transform-header h3 {
-    font-size: 1.15rem;
-    font-weight: 900;
-    color: #fff;
+    font-size: 1.1rem; font-weight: 900; color: #fff; margin-bottom: 2px;
   }
   .transform-header p {
-    font-size: 0.8rem;
-    color: var(--slate-400);
-    font-weight: 500;
+    font-size: 0.78rem; color: var(--slate-400); font-weight: 500;
   }
   .transform-card ul {
     list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    display: flex; flex-direction: column; gap: 6px;
   }
   .transform-card li {
-    font-size: 0.88rem;
-    color: var(--slate-300);
-    padding-left: 20px;
-    position: relative;
-    line-height: 1.55;
+    font-size: 0.85rem; color: var(--slate-300);
+    padding-left: 18px; position: relative; line-height: 1.55;
   }
   .transform-card li::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 9px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
+    content: ''; position: absolute; left: 0; top: 8px;
+    width: 6px; height: 6px; border-radius: 50%;
     background: var(--violet-400);
   }
   .transform-card.g li::before { background: var(--emerald-400); }
   .transform-card.s li::before { background: var(--amber-400); }
 
-  /* ============================================================
-     WORKFLOW DIAGRAM (how transforms chain)
-     ============================================================ */
   .chain {
-    margin-top: 32px;
-    padding: 24px;
+    margin-top: 28px;
+    padding: 22px;
     background: var(--bg-panel);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    font-family: 'Courier New', monospace;
-    font-weight: 800;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 10px;
+    font-family: 'Courier New', monospace; font-weight: 800;
   }
   .chain-node {
     padding: 8px 16px;
@@ -567,83 +503,27 @@
   .chain-node.g { background: rgba(16, 185, 129, 0.15); border-color: var(--emerald-400); color: var(--emerald-400); }
   .chain-node.s { background: rgba(245, 158, 11, 0.15); border-color: var(--amber-400); color: var(--amber-400); }
   .chain-node.ok { background: rgba(16, 185, 129, 0.2); border-color: var(--emerald-500); color: #fff; }
-  .chain-arrow { color: var(--slate-500); font-size: 1.2rem; }
+  .chain-arrow { color: var(--slate-500); font-size: 1.1rem; }
   .chain-caption {
-    flex-basis: 100%;
-    text-align: center;
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-    font-size: 0.85rem;
-    color: var(--slate-500);
-    margin-top: 8px;
+    flex-basis: 100%; text-align: center;
+    font-family: inherit; font-weight: 500;
+    font-size: 0.82rem; color: var(--slate-500);
+    margin-top: 6px;
   }
 
-  /* ============================================================
-     SHORTCUTS TABLE
-     ============================================================ */
-  .shortcuts-wrap {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-  }
-  .shortcuts-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .shortcuts-table th,
-  .shortcuts-table td {
-    padding: 14px 20px;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-  }
-  .shortcuts-table th {
-    font-size: 0.75rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--violet-400);
-    background: var(--bg-deep);
-  }
-  .shortcuts-table td {
-    font-size: 0.9rem;
-    color: var(--slate-300);
-  }
-  .shortcuts-table tr:last-child td { border-bottom: none; }
-  .shortcuts-table tr:hover td { background: rgba(139, 92, 246, 0.05); }
-  .shortcuts-table kbd {
-    display: inline-block;
-    padding: 3px 9px;
-    background: var(--bg-deep);
-    border: 1px solid var(--border-2);
-    border-bottom-width: 2px;
-    border-radius: 6px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: var(--amber-400);
-    min-width: 28px;
-    text-align: center;
-  }
-
-  /* ============================================================
-     ANIMATION / FRAMES SECTION
-     ============================================================ */
+  /* ===== FRAMES ===== */
   .frames-visual {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 14px;
-    margin-bottom: 32px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 14px; margin-bottom: 28px;
+    max-width: 640px; margin-left: auto; margin-right: auto;
   }
   .frame-demo {
-    aspect-ratio: 1;
-    border-radius: 12px;
+    aspect-ratio: 1; border-radius: 12px;
     background: #120e1c;
     border: 2px solid var(--border);
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     overflow: hidden;
   }
   .frame-demo.active {
@@ -661,9 +541,7 @@
   }
   .frame-demo::before {
     content: '';
-    position: absolute;
-    inset: 8px;
-    border-radius: 8px;
+    position: absolute; inset: 8px; border-radius: 8px;
     background-image:
       linear-gradient(45deg, #2e2a3d 25%, transparent 25%),
       linear-gradient(-45deg, #2e2a3d 25%, transparent 25%),
@@ -673,58 +551,36 @@
     background-position: 0 0, 0 6px, 6px -6px, -6px 0;
   }
   .frame-demo .sprite-dot {
-    position: relative;
-    z-index: 1;
-    width: 60%;
-    height: 60%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: relative; z-index: 1;
     font-family: 'Courier New', monospace;
-    font-weight: 900;
-    font-size: 0.9rem;
+    font-weight: 900; font-size: 0.8rem;
     color: var(--violet-300);
   }
   .frame-demo .eye-badge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
+    position: absolute; top: -8px; right: -8px;
+    width: 22px; height: 22px; border-radius: 6px;
     background: var(--emerald-500);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 0.65rem; font-weight: 900;
     z-index: 2;
   }
   .frame-demo.hidden .eye-badge { background: var(--slate-600); }
   .frame-demo.warn .eye-badge { background: #dc2626; }
 
   .frames-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
+    display: flex; flex-wrap: wrap; gap: 14px;
     justify-content: center;
-    padding: 20px;
+    padding: 18px;
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 12px;
   }
   .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.85rem;
-    color: var(--slate-300);
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; color: var(--slate-300);
   }
   .legend-swatch {
-    width: 16px;
-    height: 16px;
-    border-radius: 5px;
+    width: 14px; height: 14px; border-radius: 4px;
     border: 2px solid;
   }
   .legend-swatch.green { border-color: var(--emerald-500); background: rgba(16, 185, 129, 0.15); }
@@ -732,100 +588,224 @@
   .legend-swatch.magenta { border-color: var(--fuchsia-500); background: rgba(217, 70, 239, 0.15); }
   .legend-swatch.gray  { border-color: var(--slate-600); background: rgba(100, 116, 139, 0.15); }
 
-  /* ============================================================
-     ABOUT / LICENSE / FOOTER
-     ============================================================ */
+  /* ===== SHORTCUTS ===== */
+  .shortcuts-wrap {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    max-width: 720px; margin: 0 auto;
+  }
+  .shortcuts-table {
+    width: 100%; border-collapse: collapse;
+  }
+  .shortcuts-table th,
+  .shortcuts-table td {
+    padding: 12px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .shortcuts-table th {
+    font-size: 0.72rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--violet-400);
+    background: var(--bg-deep);
+  }
+  .shortcuts-table td {
+    font-size: 0.87rem; color: var(--slate-300);
+  }
+  .shortcuts-table tr:last-child td { border-bottom: none; }
+  .shortcuts-table tr:hover td { background: rgba(139, 92, 246, 0.05); }
+  .shortcuts-table kbd {
+    display: inline-block;
+    padding: 3px 9px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border-2);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem; font-weight: 800;
+    color: var(--amber-400);
+    min-width: 26px; text-align: center;
+  }
+
+  /* ===== CTA FINAL ===== */
+  .cta-box {
+    text-align: center;
+    padding: 48px 32px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(217, 70, 239, 0.1));
+    border: 2px solid rgba(167, 139, 250, 0.35);
+    border-radius: 20px;
+    position: relative; overflow: hidden;
+  }
+  .cta-box::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(139, 92, 246, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139, 92, 246, 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+  .cta-box > * { position: relative; z-index: 1; }
+  .cta-box h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 900; color: #fff;
+    margin-bottom: 12px; letter-spacing: -0.02em;
+  }
+  .cta-box p {
+    color: var(--slate-300); max-width: 560px;
+    margin: 0 auto 28px; font-size: 0.98rem;
+  }
+  .cta-buttons {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  }
+  .cta-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 22px;
+    background: linear-gradient(135deg, var(--violet-500), var(--violet-700));
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 800; font-size: 0.92rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.35);
+  }
+  .cta-btn:hover {
+    filter: brightness(1.12);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(139, 92, 246, 0.5);
+  }
+  .cta-btn.secondary {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-2);
+    color: var(--violet-300);
+    box-shadow: none;
+  }
+  .cta-btn.secondary:hover {
+    background: var(--bg-panel-2);
+    border-color: var(--violet-400);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+  }
+
+  /* ===== ABOUT ===== */
   .about-box {
     padding: 32px;
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 16px;
     text-align: center;
+    max-width: 720px; margin: 0 auto;
   }
   .about-box p {
-    font-size: 0.95rem;
-    color: var(--slate-400);
-    max-width: 720px;
-    margin: 0 auto 12px;
-    line-height: 1.7;
+    font-size: 0.93rem; color: var(--slate-400);
+    margin: 0 auto 12px; line-height: 1.7;
   }
   .about-box p strong { color: var(--violet-300); }
 
+  /* ===== FOOTER ===== */
   .footer {
-    padding: 40px 24px;
+    padding: 36px 24px;
     border-top: 1px solid var(--border);
     text-align: center;
     color: var(--slate-500);
-    font-size: 0.85rem;
+    font-size: 0.83rem;
+  }
+  .footer-links {
+    margin-top: 14px;
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 16px;
   }
   .footer a {
     color: var(--violet-400);
     font-weight: 600;
+    transition: color 0.15s;
   }
   .footer a:hover { color: var(--violet-300); }
 
-  /* ============================================================
-     RESPONSIVE
-     ============================================================ */
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 780px) {
+    .mockup-body { grid-template-columns: 1fr; }
+    .mockup-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    .mockup-panel.right { border-left: none; border-top: 1px solid var(--border); }
+    .mockup-canvas { min-height: 200px; }
+  }
   @media (max-width: 640px) {
     .section { padding: 64px 0; }
     .hero { padding: 64px 0 56px; }
-    .hero h1 { font-size: 1.75rem; }
-    .download-card { padding: 18px 20px; }
-    .download-card .os-icon { width: 44px; height: 44px; }
-    .shortcuts-table th, .shortcuts-table td { padding: 12px 14px; }
-    .shortcuts-table td { font-size: 0.85rem; }
+    .shortcuts-table th, .shortcuts-table td { padding: 10px 14px; font-size: 0.82rem; }
   }
 
-  /* ============================================================
-     ANIMATIONS
-     ============================================================ */
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-6px); }
-  }
-  .float-anim { animation: float 4s ease-in-out infinite; }
-
-  /* Smooth reveal on load */
+  /* Fade-in on scroll */
   .fade-in {
-    opacity: 0;
-    transform: translateY(20px);
-    animation: fadeInUp 0.7s ease-out forwards;
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
   }
-  .fade-in.delay-1 { animation-delay: 0.1s; }
-  .fade-in.delay-2 { animation-delay: 0.2s; }
-  .fade-in.delay-3 { animation-delay: 0.3s; }
-  .fade-in.delay-4 { animation-delay: 0.4s; }
-  @keyframes fadeInUp {
-    to { opacity: 1; transform: translateY(0); }
-  }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
 </style>
 </head>
 <body>
 
-<!-- ============================================================
-     HERO
-     ============================================================ -->
+<!-- ============================ HERO ============================ -->
 <section class="hero">
   <div class="container">
-    <div class="logo-mark float-anim">
-      <svg viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="3" width="7" height="7" fill="#fff" opacity="0.95"/>
-        <rect x="14" y="3" width="7" height="7" fill="#fff" opacity="0.75"/>
-        <rect x="3" y="14" width="7" height="7" fill="#fff" opacity="0.75"/>
-        <rect x="14" y="14" width="7" height="7" fill="#fff" opacity="0.95"/>
+    <!-- Logo BGPE (SVG inline) -->
+    <div class="logo-mark">
+      <svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#8b5cf6"/>
+            <stop offset="100%" stop-color="#d946ef"/>
+          </linearGradient>
+        </defs>
+        <rect width="96" height="96" rx="22" fill="url(#logoBg)"/>
+        <rect x="2" y="2" width="92" height="92" rx="20" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+        <!-- BGPE em pixels brancos -->
+        <g fill="#fff">
+          <rect x="14" y="18" width="6" height="6"/><rect x="20" y="18" width="6" height="6"/>
+          <rect x="26" y="18" width="6" height="6"/>
+          <rect x="14" y="24" width="6" height="6"/><rect x="30" y="24" width="6" height="6"/>
+          <rect x="14" y="30" width="6" height="6"/><rect x="20" y="30" width="6" height="6"/>
+          <rect x="26" y="30" width="6" height="6"/>
+          <rect x="14" y="36" width="6" height="6"/><rect x="30" y="36" width="6" height="6"/>
+          <rect x="14" y="42" width="6" height="6"/><rect x="20" y="42" width="6" height="6"/>
+          <rect x="26" y="42" width="6" height="6"/>
+
+          <rect x="38" y="18" width="6" height="6"/><rect x="44" y="18" width="6" height="6"/>
+          <rect x="50" y="18" width="6" height="6"/><rect x="56" y="18" width="6" height="6"/>
+          <rect x="38" y="24" width="6" height="6"/>
+          <rect x="38" y="30" width="6" height="6"/><rect x="50" y="30" width="6" height="6"/>
+          <rect x="56" y="30" width="6" height="6"/>
+          <rect x="38" y="36" width="6" height="6"/><rect x="56" y="36" width="6" height="6"/>
+          <rect x="38" y="42" width="6" height="6"/><rect x="44" y="42" width="6" height="6"/>
+          <rect x="50" y="42" width="6" height="6"/><rect x="56" y="42" width="6" height="6"/>
+
+          <rect x="62" y="18" width="6" height="6"/><rect x="68" y="18" width="6" height="6"/>
+          <rect x="74" y="18" width="6" height="6"/>
+          <rect x="62" y="24" width="6" height="6"/><rect x="78" y="24" width="6" height="6"/>
+          <rect x="62" y="30" width="6" height="6"/><rect x="68" y="30" width="6" height="6"/>
+          <rect x="74" y="30" width="6" height="6"/>
+          <rect x="62" y="36" width="6" height="6"/>
+          <rect x="62" y="42" width="6" height="6"/>
+        </g>
+        <!-- Linha âmbar -->
+        <rect x="14" y="60" width="68" height="4" rx="2" fill="#fbbf24"/>
+        <!-- Subtítulo pixel -->
+        <g fill="rgba(255,255,255,0.55)">
+          <rect x="22" y="72" width="4" height="4"/><rect x="30" y="72" width="4" height="4"/>
+          <rect x="42" y="72" width="4" height="4"/><rect x="50" y="72" width="4" height="4"/>
+          <rect x="58" y="72" width="4" height="4"/><rect x="66" y="72" width="4" height="4"/>
+        </g>
       </svg>
     </div>
 
-    <h1 class="fade-in">BravosGamebr</h1>
-    <p class="subtitle fade-in delay-1">Character Studio &amp; Pixel Editor</p>
-    <p class="tagline fade-in delay-2">
-      A free, offline pixel art editor built for game developers.
-      Draw, animate, and organize multi-direction character sprites —
-      all in one focused studio.
+    <h1>BGPE</h1>
+    <p class="subtitle">BravosGamebr Pixel Editor</p>
+    <p class="tagline">
+      A free, offline pixel art editor and character animation studio.
+      Draw, animate, and organize multi-direction sprites — all in one focused studio.
     </p>
 
-    <div class="badges fade-in delay-3">
+    <div class="badges">
       <span class="badge"><span class="dot"></span>Offline</span>
       <span class="badge">Windows</span>
       <span class="badge">Linux</span>
@@ -834,20 +814,20 @@
     </div>
 
     <!-- DOWNLOAD BUTTONS -->
-    <div class="download-grid fade-in delay-4">
+    <div class="download-grid">
       <a class="download-card win"
-         href="https://mega.nz/file/crIVkZhR#7sl8-XbXhIATbFjNV1JcdR6H8-UvPZeLTIZOoNKPry8"
+         href="https://github.com/byzmod3d/byzmod3d/releases/latest/download/BGPE_v1.0.0_Windows_x64.exe"
          target="_blank" rel="noopener">
         <div class="os-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff">
+          <svg viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 5.5L10.5 4.5v7.5H3V5.5zM11.5 4.35L21 3v9h-9.5V4.35zM3 13h7.5v7.5L3 19.5V13zM11.5 13H21v9l-9.5-1.35V13z"/>
           </svg>
         </div>
         <div class="os-info">
           <div class="os-name">Download for Windows</div>
-          <div class="os-meta">64-bit · .exe portable · no install required</div>
+          <div class="os-meta">64-bit · .exe portable · 60 MB</div>
         </div>
-        <svg class="dl-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
@@ -855,18 +835,18 @@
       </a>
 
       <a class="download-card"
-         href="https://mega.nz/file/szhCyZgZ#1NZEwciclHF9ptvngPJ9sKGEQ5dbbI2ETJHOdJi5l70"
+         href="https://github.com/byzmod3d/byzmod3d/releases/latest/download/BGPE_v1.0.0_Linux_x86_64.AppImage"
          target="_blank" rel="noopener">
         <div class="os-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff">
+          <svg viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 3c1.4 0 2.5 1.1 2.5 2.5S13.4 10 12 10 9.5 8.9 9.5 7.5 10.6 5 12 5zm0 14.2c-2.5 0-4.7-1.3-6-3.2.03-2 4-3.1 6-3.1s5.97 1.1 6 3.1c-1.3 1.9-3.5 3.2-6 3.2z"/>
           </svg>
         </div>
         <div class="os-info">
           <div class="os-name">Download for Linux</div>
-          <div class="os-meta">64-bit · AppImage / portable folder</div>
+          <div class="os-meta">64-bit · .AppImage · 91 MB</div>
         </div>
-        <svg class="dl-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
@@ -874,187 +854,214 @@
       </a>
     </div>
 
-    <p class="download-note fade-in delay-4">
-      Downloads are hosted on <strong>MEGA</strong>. No email, no signup — just click and go.
+    <p class="download-note">
+      Downloads are hosted on <strong>GitHub</strong>.
+      No email, no signup — just click and go.
+      View the <a href="https://github.com/byzmod3d/byzmod3d/releases" target="_blank" rel="noopener">full release list</a>.
     </p>
   </div>
 </section>
 
-<!-- ============================================================
-     GETTING STARTED
-     ============================================================ -->
-<section class="section" id="start">
+<!-- ============================ EDITOR MOCKUP ============================ -->
+<section class="section-tight">
   <div class="container">
-    <div class="section-header">
-      <span class="section-label">Getting Started</span>
-      <h2 class="section-title">Up and running in 60 seconds</h2>
-      <p class="section-subtitle">
-        No installation wizard, no dependencies. Download, extract, run.
-      </p>
-    </div>
-
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-num">1</div>
-        <h3>Download</h3>
-        <p>Click the download button for your operating system above. The file comes as a compressed archive.</p>
-      </div>
-
-      <div class="step-card">
-        <div class="step-num">2</div>
-        <h3>Extract</h3>
-        <p>Unzip the folder anywhere on your computer. Windows users: right-click → <strong>Extract All</strong>. Linux users: <code>tar -xf file</code> or use your file manager.</p>
-      </div>
-
-      <div class="step-card">
-        <div class="step-num">3</div>
-        <h3>Run</h3>
-        <p>Open the extracted folder and double-click the <code>sprite_editor</code> executable. No install required. On Linux you may need to right-click → Properties → Permissions → Allow executing.</p>
-      </div>
-
-      <div class="step-card">
-        <div class="step-num">4</div>
-        <h3>Start Drawing</h3>
-        <p>The editor opens with a blank canvas and a sample character loaded. Pick a tool on the right, pick a color, and click on the canvas to paint.</p>
+    <div class="mockup-wrap fade-in">
+      <div class="mockup">
+        <div class="mockup-header">
+          <span class="mockup-dot red"></span>
+          <span class="mockup-dot yellow"></span>
+          <span class="mockup-dot green"></span>
+          <span class="mockup-title">BGPE — BravosGamebr Pixel Editor</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-panel">
+            <div class="mockup-panel-title">Direction</div>
+            <div class="mockup-btn active">Front</div>
+            <div class="mockup-btn">Side</div>
+            <div class="mockup-btn">Back</div>
+            <div class="mockup-panel-title" style="margin-top:14px;">Frames</div>
+            <div class="mockup-btn">Frame 1</div>
+            <div class="mockup-btn">Frame 2</div>
+            <div class="mockup-btn">Frame 3</div>
+          </div>
+          <div class="mockup-canvas">
+            <div class="mockup-sprite"></div>
+          </div>
+          <div class="mockup-panel right">
+            <div class="mockup-panel-title">Tools</div>
+            <div class="mockup-btn active">Brush</div>
+            <div class="mockup-btn">Eraser</div>
+            <div class="mockup-btn">Fill</div>
+            <div class="mockup-btn">Picker</div>
+            <div class="mockup-btn">Select</div>
+            <div class="mockup-panel-title" style="margin-top:14px;">Palette</div>
+            <div class="mockup-swatch">
+              <span style="background:#f5c89a"></span>
+              <span style="background:#ee3a88"></span>
+              <span style="background:#5b21b6"></span>
+              <span style="background:#3ae2ee"></span>
+              <span style="background:#fbbf24"></span>
+              <span style="background:#10b981"></span>
+              <span style="background:#1a1a2e"></span>
+              <span style="background:#ffffff"></span>
+              <span style="background:#8b5cf6"></span>
+              <span style="background:#d946ef"></span>
+              <span style="background:#06b6d4"></span>
+              <span style="background:#f43f5e"></span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ============================================================
-     TOOLS
-     ============================================================ -->
+<!-- ============================ GETTING STARTED ============================ -->
+<section class="section" id="start">
+  <div class="container">
+    <div class="section-header fade-in">
+      <span class="section-label">Getting Started</span>
+      <h2 class="section-title">Up and running in 60 seconds</h2>
+      <p class="section-subtitle">
+        No installation wizard, no dependencies. Download, run, draw.
+      </p>
+    </div>
+
+    <div class="steps-grid">
+      <div class="step-card fade-in">
+        <div class="step-num">1</div>
+        <h3>Download</h3>
+        <p>Click the download button for your OS above. Pick the latest release for your platform.</p>
+      </div>
+
+      <div class="step-card fade-in">
+        <div class="step-num">2</div>
+        <h3>Run — Windows</h3>
+        <p>Double-click the <code>.exe</code>. That's it — no install, no setup wizard, no admin rights needed.</p>
+      </div>
+
+      <div class="step-card fade-in">
+        <div class="step-num">2</div>
+        <h3>Run — Linux</h3>
+        <p>Make the AppImage executable and run it:<br><code>chmod +x BGPE_*.AppImage</code> then <code>./BGPE_*.AppImage</code></p>
+      </div>
+
+      <div class="step-card fade-in">
+        <div class="step-num">3</div>
+        <h3>Start Drawing</h3>
+        <p>The editor opens with a blank canvas and a sample character. Pick a tool on the right, pick a color, and paint.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ TOOLS ============================ -->
 <section class="section" id="tools" style="background: var(--bg-main);">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header fade-in">
       <span class="section-label">Tools</span>
       <h2 class="section-title">Every tool you need. Nothing you don't.</h2>
       <p class="section-subtitle">
         Eleven focused tools — each one designed for pixel-perfect work.
-        Hover any icon in the editor to see its shortcut.
       </p>
     </div>
 
     <div class="tools-grid">
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg></div>
         <div class="tool-info">
           <h3>Brush <span class="key">B</span></h3>
-          <p>Paint pixels with 4 effects: Normal, Spray, Glow, and Texture. Size 1–16px, adjustable opacity.</p>
+          <p>Paint pixels with 4 effects: Normal, Spray, Glow, and Texture. Size 1–16px.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg></div>
         <div class="tool-info">
           <h3>Eraser <span class="key">E</span></h3>
           <p>Erase pixels back to transparent. Right-click with any tool to erase temporarily.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/></svg></div>
         <div class="tool-info">
           <h3>Fill / Bucket</h3>
-          <p>Flood-fill connected pixels of a similar color. Tolerance slider lets you control how picky it is.</p>
+          <p>Flood-fill connected pixels of a similar color. Tolerance slider controls how picky it is.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><path d="m15 4-3 3"/><path d="M18 7 15 4"/><path d="m3 21 12-12"/><path d="M9 3v4"/><path d="M21 9h-4"/><path d="M4 5h.01"/><path d="M20 20h.01"/><path d="M4 20h.01"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><path d="m15 4-3 3"/><path d="M18 7 15 4"/><path d="m3 21 12-12"/><path d="M9 3v4"/><path d="M21 9h-4"/><path d="M4 5h.01"/><path d="M20 20h.01"/><path d="M4 20h.01"/></svg></div>
         <div class="tool-info">
           <h3>Magic Wand <span class="key">W</span></h3>
-          <p>Click a color to erase all connected pixels of that color. Fast way to clean up backgrounds.</p>
+          <p>Click a color to erase all connected pixels of that color. Fast cleanup.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.9.9a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.9.9Z"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.9.9a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.9.9Z"/></svg></div>
         <div class="tool-info">
           <h3>Color Picker <span class="key">I</span></h3>
-          <p>Click any pixel on the canvas to grab its color as your active color.</p>
+          <p>Click any pixel to grab its color as your active color.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
         <div class="tool-info">
           <h3>Rectangle Select <span class="key">M</span></h3>
-          <p>Drag to select a rectangular area. All paint tools then stay inside that box.</p>
+          <p>Drag to select a rectangular area. Paint tools stay inside that box.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div>
         <div class="tool-info">
           <h3>Ellipse Select <span class="key">O</span></h3>
           <p>Same as Rectangle, but selects an ellipse. Great for circular sprites.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M7 16.93c.96.43 1.96.74 2.99.91"/><path d="M3.34 14A6.8 6.8 0 0 1 2 10c0-4.42 4.48-8 10-8s10 3.58 10 8a7.19 7.19 0 0 1-.33 2"/><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M21 15a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M7 16.93c.96.43 1.96.74 2.99.91"/><path d="M3.34 14A6.8 6.8 0 0 1 2 10c0-4.42 4.48-8 10-8s10 3.58 10 8a7.19 7.19 0 0 1-.33 2"/><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M21 15a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg></div>
         <div class="tool-info">
           <h3>Lasso Select <span class="key">L</span></h3>
-          <p>Click points to draw a custom selection polygon. Click near the first point to close it.</p>
+          <p>Click points to draw a custom selection polygon. Click near the first point to close.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><path d="M4 20s1.5-2 3-2 2 1 3 1 2.5-2 4-2 2 1 3 1 3-2 3-2"/><path d="M4 14s1.5-2 3-2 2 1 3 1 2.5-2 4-2 2 1 3 1 3-2 3-2"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><path d="M4 20s1.5-2 3-2 2 1 3 1 2.5-2 4-2 2 1 3 1 3-2 3-2"/><path d="M4 14s1.5-2 3-2 2 1 3 1 2.5-2 4-2 2 1 3 1 3-2 3-2"/></svg></div>
         <div class="tool-info">
           <h3>Path Brush <span class="key">P</span></h3>
-          <p>Click to place points, right-click to apply the stroke. 12 styles: smooth, dotted, dashed, zigzag, wavy, ribbon, and more.</p>
+          <p>Place points, right-click to apply. 12 styles: smooth, dotted, dashed, zigzag, wavy, ribbon, and more.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></div>
         <div class="tool-info">
           <h3>Move <span class="key">V</span></h3>
-          <p>Move pixels inside the selection, or move the whole frame with arrow keys.</p>
+          <p>Move pixels inside the selection, or nudge the whole frame with arrow keys.</p>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon">
-          <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-        </div>
+      <div class="tool-card fade-in">
+        <div class="tool-icon"><svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div>
         <div class="tool-info">
           <h3>Text <span class="key">T</span></h3>
-          <p>Stamp uppercase letters and numbers on the canvas using a built-in 5×7 pixel font.</p>
+          <p>Stamp uppercase letters and numbers using a built-in 5×7 pixel font.</p>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ============================================================
-     TRANSFORMS (R / G / S)
-     ============================================================ -->
+<!-- ============================ TRANSFORMS ============================ -->
 <section class="section" id="transforms">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header fade-in">
       <span class="section-label">Blender-style Transforms</span>
       <h2 class="section-title">Rotate. Grab. Scale. Chain them freely.</h2>
       <p class="section-subtitle">
@@ -1065,7 +1072,7 @@
     </div>
 
     <div class="transform-grid">
-      <div class="transform-card">
+      <div class="transform-card fade-in">
         <div class="transform-header">
           <div class="transform-key">R</div>
           <div>
@@ -1080,7 +1087,7 @@
         </ul>
       </div>
 
-      <div class="transform-card g">
+      <div class="transform-card g fade-in">
         <div class="transform-header">
           <div class="transform-key">G</div>
           <div>
@@ -1095,7 +1102,7 @@
         </ul>
       </div>
 
-      <div class="transform-card s">
+      <div class="transform-card s fade-in">
         <div class="transform-header">
           <div class="transform-key">S</div>
           <div>
@@ -1111,7 +1118,7 @@
       </div>
     </div>
 
-    <div class="chain">
+    <div class="chain fade-in">
       <span class="chain-node">R</span>
       <span class="chain-arrow">→</span>
       <span class="chain-node g">G</span>
@@ -1124,22 +1131,19 @@
   </div>
 </section>
 
-<!-- ============================================================
-     FRAMES & ANIMATION
-     ============================================================ -->
+<!-- ============================ FRAMES ============================ -->
 <section class="section" id="animation" style="background: var(--bg-main);">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header fade-in">
       <span class="section-label">Frames &amp; Animation</span>
       <h2 class="section-title">Animate your character, frame by frame</h2>
       <p class="section-subtitle">
         Every direction (Front / Side / Back) has its own animation set (Idle / Walk / Still).
-        Build each animation frame by frame, then hit Play to preview the loop.
+        Build frame by frame, then hit Play to preview the loop.
       </p>
     </div>
 
-    <!-- Visual demo of the frame list -->
-    <div class="frames-visual">
+    <div class="frames-visual fade-in">
       <div class="frame-demo active">
         <div class="eye-badge">V</div>
         <div class="sprite-dot">Frame 1</div>
@@ -1158,100 +1162,31 @@
       </div>
     </div>
 
-    <div class="frames-legend">
+    <div class="frames-legend fade-in">
       <div class="legend-item">
         <span class="legend-swatch green"></span>
-        <span><strong>Green border</strong> — selected &amp; visible (safe to paint)</span>
+        <span><strong>Green border</strong> — selected &amp; visible</span>
       </div>
       <div class="legend-item">
         <span class="legend-swatch red"></span>
-        <span><strong>Red pulsing border</strong> — selected but hidden (you're painting blind!)</span>
+        <span><strong>Red pulsing</strong> — selected but hidden</span>
       </div>
       <div class="legend-item">
         <span class="legend-swatch magenta"></span>
-        <span><strong>Magenta border</strong> — marked for merge (Shift+click)</span>
+        <span><strong>Magenta</strong> — marked for merge (Shift+click)</span>
       </div>
       <div class="legend-item">
         <span class="legend-swatch gray"></span>
-        <span><strong>Dimmed thumbnail</strong> — frame hidden from the canvas</span>
-      </div>
-    </div>
-
-    <div class="steps-grid" style="margin-top: 40px;">
-      <div class="step-card">
-        <div class="step-num">＋</div>
-        <h3>Add Frame</h3>
-        <p>Click the green <strong>+</strong> button to add a new empty frame. The new frame starts hidden — click its eye icon to make it visible.</p>
-      </div>
-
-      <div class="step-card">
-        <div class="step-num">📋</div>
-        <h3>Copy / Paste</h3>
-        <p>Click <strong>COPY</strong> to store the current frame, then <strong>PASTE</strong> into any other frame (or other direction/animation). Perfect for making a variant.</p>
-      </div>
-
-      <div class="step-card">
-        <div class="step-num">🟡</div>
-        <h3>Merge Frames</h3>
-        <p>Shift+click to mark frames (they turn magenta), then press <strong>MERGE</strong> to combine them into one. Newer frames win on conflicts.</p>
-      </div>
-
-      <div class="step-card">
-        <div class="step-num">▶</div>
-        <h3>Play / Preview</h3>
-        <p>Click <strong>PLAY</strong> (or press <strong>Space</strong>) to preview the animation. Adjust FPS with the slider. Hidden frames are skipped during playback.</p>
+        <span><strong>Dimmed</strong> — frame hidden from the canvas</span>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ============================================================
-     CAPTURE & TRACE (image import)
-     ============================================================ -->
-<section class="section" id="capture">
+<!-- ============================ SHORTCUTS ============================ -->
+<section class="section" id="shortcuts">
   <div class="container">
-    <div class="section-header">
-      <span class="section-label">Capture &amp; Trace</span>
-      <h2 class="section-title">Trace any image into pixel art</h2>
-      <p class="section-subtitle">
-        Import a reference image, paint over it, then capture exactly what's inside the amber frame as a 64×64 sprite.
-      </p>
-    </div>
-
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-num">1</div>
-        <h3>Open the Capture Modal</h3>
-        <p>Click the amber <strong>CAPTURAR</strong> button in the top-right. A full-screen workspace opens.</p>
-      </div>
-
-      <div class="step-card">
-        <div class="step-num">2</div>
-        <h3>Load a Reference Image</h3>
-        <p>Click <strong>Load Image</strong> on the left sidebar. Pick any PNG or JPG. It appears as a semi-transparent layer.</p>
-      </div>
-
-      <div class="step-card">
-        <div class="step-num">3</div>
-        <h3>Paint Over It</h3>
-        <p>Use the same paint tools. Zoom with the mouse wheel, pan with right-drag. Lower the image opacity to see your pixels better.</p>
-      </div>
-
-      <div class="step-card">
-        <div class="step-num">4</div>
-        <h3>Capture</h3>
-        <p>Position the image so the part you want sits inside the amber square. Press <strong>F12</strong> or click <strong>Capture → 2D</strong>. The 64×64 area becomes your current frame.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================
-     SHORTCUTS
-     ============================================================ -->
-<section class="section" id="shortcuts" style="background: var(--bg-main);">
-  <div class="container">
-    <div class="section-header">
+    <div class="section-header fade-in">
       <span class="section-label">Shortcuts</span>
       <h2 class="section-title">Essential keyboard shortcuts</h2>
       <p class="section-subtitle">
@@ -1259,13 +1194,10 @@
       </p>
     </div>
 
-    <div class="shortcuts-wrap">
+    <div class="shortcuts-wrap fade-in">
       <table class="shortcuts-table">
         <thead>
-          <tr>
-            <th style="width: 30%;">Key</th>
-            <th>Action</th>
-          </tr>
+          <tr><th style="width: 30%;">Key</th><th>Action</th></tr>
         </thead>
         <tbody>
           <tr><td><kbd>R</kbd></td><td>Enter Rotate mode on the current selection</td></tr>
@@ -1285,60 +1217,95 @@
   </div>
 </section>
 
-<!-- ============================================================
-     ABOUT
-     ============================================================ -->
+<!-- ============================ CTA FINAL ============================ -->
 <section class="section-tight">
   <div class="container">
-    <div class="about-box">
+    <div class="cta-box fade-in">
+      <h2>Ready to start drawing?</h2>
+      <p>
+        BGPE is free, offline, and portable. No account, no subscription,
+        no cloud. Just download and create.
+      </p>
+      <div class="cta-buttons">
+        <a class="cta-btn" href="https://github.com/byzmod3d/byzmod3d/releases/latest/download/BGPE_v1.0.0_Windows_x64.exe" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5L10.5 4.5v7.5H3V5.5zM11.5 4.35L21 3v9h-9.5V4.35zM3 13h7.5v7.5L3 19.5V13zM11.5 13H21v9l-9.5-1.35V13z"/></svg>
+          Download for Windows
+        </a>
+        <a class="cta-btn" href="https://github.com/byzmod3d/byzmod3d/releases/latest/download/BGPE_v1.0.0_Linux_x86_64.AppImage" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 3c1.4 0 2.5 1.1 2.5 2.5S13.4 10 12 10 9.5 8.9 9.5 7.5 10.6 5 12 5zm0 14.2c-2.5 0-4.7-1.3-6-3.2.03-2 4-3.1 6-3.1s5.97 1.1 6 3.1c-1.3 1.9-3.5 3.2-6 3.2z"/></svg>
+          Download for Linux
+        </a>
+        <a class="cta-btn secondary" href="https://github.com/byzmod3d/byzmod3d/releases" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          See all releases
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ABOUT ============================ -->
+<section class="section-tight">
+  <div class="container">
+    <div class="about-box fade-in">
       <span class="section-label" style="margin-bottom: 20px;">About</span>
-      <h2 class="section-title" style="font-size: 1.5rem;">Built by a game dev, for game devs.</h2>
+      <h2 class="section-title" style="font-size: 1.4rem;">Built by a game dev, for game devs.</h2>
       <p>
-        <strong>BravosGamebr — Character Studio &amp; Pixel Editor</strong> is a lightweight,
-        offline pixel art editor focused on one thing: making 2D character animation fast and painless.
+        <strong>BGPE — BravosGamebr Pixel Editor</strong> is a lightweight,
+        offline pixel art editor focused on one thing: making 2D character animation
+        fast and painless.
       </p>
       <p>
-        No accounts. No cloud sync. No subscription. Just a fast, focused tool that runs on
-        <strong>Windows</strong> and <strong>Linux</strong> and works entirely offline.
-      </p>
-      <p>
-        If you make something cool with it, tag <strong>@bravosgamebr</strong> — I'd love to see it.
+        No accounts. No cloud sync. No subscription. Just a fast, focused tool
+        that runs on <strong>Windows</strong> and <strong>Linux</strong> and works
+        entirely offline.
       </p>
     </div>
   </div>
 </section>
 
-<!-- ============================================================
-     FOOTER
-     ============================================================ -->
+<!-- ============================ FOOTER ============================ -->
 <footer class="footer">
   <div class="container">
     <p>
-      <strong>BravosGamebr — Character Studio &amp; Pixel Editor</strong><br>
-      Free &amp; open for everyone · Made with 💜
+      <strong>BGPE — BravosGamebr Pixel Editor</strong><br>
+      Free &amp; open for everyone.
     </p>
-    <p style="margin-top: 12px;">
-      <a href="#start">Getting Started</a> &nbsp;·&nbsp;
-      <a href="#tools">Tools</a> &nbsp;·&nbsp;
-      <a href="#transforms">Transforms</a> &nbsp;·&nbsp;
-      <a href="#animation">Animation</a> &nbsp;·&nbsp;
-      <a href="#capture">Capture</a> &nbsp;·&nbsp;
+    <div class="footer-links">
+      <a href="#start">Getting Started</a>
+      <a href="#tools">Tools</a>
+      <a href="#transforms">Transforms</a>
+      <a href="#animation">Animation</a>
       <a href="#shortcuts">Shortcuts</a>
-    </p>
+      <a href="https://github.com/byzmod3d/byzmod3d/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/byzmod3d/byzmod3d/releases" target="_blank" rel="noopener">Releases</a>
+    </div>
   </div>
 </footer>
 
-<!-- ============================================================
-     SMALL SCRIPT — smooth reveal for fade-in elements
-     ============================================================ -->
 <script>
-  // Set current year in footer (if needed later)
-  // Reveal all fade-in elements even if user has JS disabled — they're CSS-animated anyway.
+  // Fade-in on scroll
+  (function () {
+    if (!('IntersectionObserver' in window)) {
+      // Fallback: just show everything
+      document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
 
-  // Optional: log to console that the page is standalone
-  console.log('%cBravosGamebr — Character Studio & Pixel Editor',
+    document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+  })();
+
+  console.log('%cBGPE — BravosGamebr Pixel Editor',
               'color:#a78bfa;font-weight:bold;font-size:14px;');
-  console.log('%cLanding page loaded. All set.', 'color:#64748b;font-size:11px;');
+  console.log('%cLanding page ready.', 'color:#64748b;font-size:11px;');
 </script>
 
 </body>
